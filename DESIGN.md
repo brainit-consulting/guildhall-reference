@@ -35,7 +35,10 @@ One accent. Stages, statuses and charts use `ink`, `muted` and `accent` shades, 
 - Square corners (2px at most). No shadows, gradients, glows, glass or blur.
 - One deliberate break: page titles hang into the left margin (`-ml-px` on small screens, `md:-ml-6` from 768px).
 - Forms: one column, labels above fields, the primary button at the bottom left.
-- Under 768px the menu becomes a top bar; nothing scrolls sideways.
+- Under 768px the menu becomes a top bar, and the page never scrolls sideways. Tables become stacked rows there: each
+  record is a short block with its main field first (the name, or a deal's title) as the link, then the other columns
+  as "Label: value" lines, with hairline rules between records. The one exception is the pipeline board, which
+  scrolls sideways inside its own box.
 
 ## Words in the UI
 

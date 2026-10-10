@@ -59,6 +59,49 @@ export async function createTask(db: Db, target: TaskTarget, input: TaskInput): 
   return addTask(db, target, checked.values);
 }
 
+// What the Tasks page's picker offers: every contact, company and deal, A to Z by name. `value` says the kind and the
+// id ("deal:<id>"); `detail` names the kind, and the company of a contact or deal, to tell two of one name apart.
+export type TaskTargetChoice = { value: string; name: string; detail: string };
+
+const KIND: Record<TaskTarget["type"], string> = { contact: "Contact", company: "Company", deal: "Deal" };
+
+export async function listTaskTargetChoices(db: Db): Promise<TaskTargetChoice[]> {
+  const [contacts, companies, deals] = await Promise.all([
+    db.select({ id: contact.id, name: contact.name, companyName: company.name }).from(contact)
+      .leftJoin(company, eq(contact.companyId, company.id)),
+    db.select({ id: company.id, name: company.name, companyName: sql<null>`null` }).from(company),
+    db.select({ id: deal.id, name: deal.title, companyName: company.name }).from(deal)
+      .leftJoin(company, eq(deal.companyId, company.id)),
+  ]);
+  const choices = ([["contact", contacts], ["company", companies], ["deal", deals]] as const).flatMap(([type, rows]) =>
+    rows.map((r) => ({
+      value: `${type}:${r.id}`, name: r.name,
+      detail: r.companyName ? `${KIND[type]} · ${r.companyName}` : KIND[type],
+    })));
+  return choices.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+    || a.detail.localeCompare(b.detail) || a.value.localeCompare(b.value));
+}
+
+// A picked value back into a target; null when nothing (or no kind Guildhall knows) was picked. The id is checked
+// when the task is saved, like any other.
+export function readTarget(value: string): TaskTarget | null {
+  const [type, id, ...rest] = value.trim().split(":");
+  if (rest.length || !id || !(type === "contact" || type === "company" || type === "deal")) return null;
+  return { type, id };
+}
+
+export const PICK_TARGET = "Pick the contact, company or deal this is for.";
+
+// "Add task" on the Tasks page, where the record is picked: every problem is reported at once.
+export async function createTaskOn(db: Db, picked: string, input: TaskInput): Promise<Saved> {
+  const target = readTarget(picked);
+  const checked = checkTask(input);
+  if (!target || checked.errors) {
+    return { id: null, errors: { ...checked.errors, ...(target ? {} : { target: PICK_TARGET }) } };
+  }
+  return addTask(db, target, checked.values);
+}
+
 // Ticks (done) or unticks a task. Ticking one already done keeps when it was first done.
 export async function setTaskDone(db: Db, taskId: string, done: boolean): Promise<{ error: string | null }> {
   const gone = { error: "That task isn't in Guildhall any more." };

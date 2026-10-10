@@ -32,12 +32,12 @@ before a day; sorted by due date then title; each with what it belongs to and it
 
 ### Task 2: Pages
 
-- [ ] **Step 1:** `src/app/(signed-in)/_tasks/`: server actions, Add task form, task line with tick box, the section.
-- [ ] **Step 2:** The section on the contact, company and deal pages, above Activity.
+- [x] **Step 1:** `src/app/(signed-in)/_tasks/`: server actions, Add task form, task line with tick box, the section.
+- [x] **Step 2:** The section on the contact, company and deal pages, above Activity.
 
 ### Task 3: Tests and checks
 
-- [ ] **Step 1:** `e2e/tasks.spec.ts`.
+- [x] **Step 1:** `e2e/tasks.spec.ts`.
 - [ ] **Step 2:** typecheck, lint, test, test:e2e, build; tried in a browser at 390px and 1280px, light and dark.
 
 ## Acceptance

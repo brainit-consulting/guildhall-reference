@@ -23,26 +23,27 @@ export default async function ContactsPage() {
           No contacts yet. <Link href="/contacts/new" className="text-accent underline-offset-4 hover:underline">Add your first.</Link>
         </p>
       ) : (
-        // the table scrolls inside itself on a phone; the page never does
+        // under 768px only Name and Email show (both fields are on the contact's own page), so nothing scrolls
+        // sideways; wrap-anywhere, unlike break-words, lets a long email narrow its column instead of widening the table
         <div className="mt-8 overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-rule bg-panel text-sm text-muted">
                 <th scope="col" className="px-3 py-2 font-medium">Name</th>
                 <th scope="col" className="px-3 py-2 font-medium">Email</th>
-                <th scope="col" className="px-3 py-2 font-medium">Phone</th>
-                <th scope="col" className="px-3 py-2 font-medium">Job title</th>
+                <th scope="col" className="hidden px-3 py-2 font-medium md:table-cell">Phone</th>
+                <th scope="col" className="hidden px-3 py-2 font-medium md:table-cell">Job title</th>
               </tr>
             </thead>
             <tbody>
               {contacts.map((c) => (
                 <tr key={c.id} className="border-b border-rule">
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 wrap-anywhere">
                     <Link href={`/contacts/${c.id}`} className="text-accent underline-offset-4 hover:underline">{c.name}</Link>
                   </td>
-                  <td className="break-words px-3 py-2 text-ink">{c.email}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-ink">{c.phone}</td>
-                  <td className="px-3 py-2 text-ink">{c.jobTitle}</td>
+                  <td className="px-3 py-2 text-ink wrap-anywhere">{c.email}</td>
+                  <td className="hidden whitespace-nowrap px-3 py-2 text-ink md:table-cell">{c.phone}</td>
+                  <td className="hidden px-3 py-2 text-ink md:table-cell">{c.jobTitle}</td>
                 </tr>
               ))}
             </tbody>

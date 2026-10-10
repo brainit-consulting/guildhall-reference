@@ -97,6 +97,33 @@ test.describe("as the owner", () => {
   });
 });
 
+test.describe("at phone width", () => {
+  test.use({ storageState: OWNER_STATE, viewport: { width: 390, height: 844 } });
+
+  test("the table fits without scrolling sideways, even with a long email", async ({ page }) => {
+    const name = `Julian of Norwich ${Date.now()}`;
+    await page.goto("/contacts/new");
+    await page.getByLabel("Name").fill(name);
+    await page.getByLabel("Email").fill("julian.anchoress.saint.julians.church@conisford-norwich.example");
+    await page.getByLabel("Phone").fill("01603 767 380");
+    await page.getByRole("button", { name: "Add contact" }).click();
+    await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible(COLD);
+
+    await page.goto("/contacts");
+    const table = page.getByRole("table");
+    await expect(table.getByRole("link", { name, exact: true })).toBeVisible(COLD);
+    // Phone and Job title are left to the contact's page
+    await expect(table.getByRole("columnheader", { name: "Phone" })).toBeHidden();
+    await expect(table.getByRole("columnheader", { name: "Job title" })).toBeHidden();
+    const fits = await table.evaluate((t) => {
+      const box = t.parentElement!;
+      const html = document.documentElement;
+      return box.scrollWidth <= box.clientWidth && html.scrollWidth <= html.clientWidth;
+    });
+    expect(fits).toBe(true);
+  });
+});
+
 test("Contacts needs you signed in", async ({ page }) => {
   await page.goto("/contacts");
   await expect(page).toHaveURL(/\/signin$/);

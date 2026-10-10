@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth/session";
-import { getCompany, websiteHref } from "@/lib/companies";
+import { getCompany, listCompanyContacts, websiteHref } from "@/lib/companies";
 import { db } from "@/lib/db/client";
 import { DeleteCompany } from "./delete-company";
 
@@ -17,6 +17,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const c = await getCompany(db, id);
   if (!c) notFound();
+  const people = await listCompanyContacts(db, c.id);
 
   const href = websiteHref(c.website);
   const fields: [string, React.ReactNode][] = [
@@ -41,11 +42,32 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
         ))}
       </dl>
 
+      <section aria-labelledby="people" className="mt-10">
+        <div className="flex flex-wrap items-baseline justify-between gap-4">
+          <h2 id="people" className="font-display text-2xl text-ink">Contacts</h2>
+          <Link href={`/contacts/new?company=${c.id}`} className="text-sm text-accent underline-offset-4 hover:underline">Add contact</Link>
+        </div>
+        {people.length === 0 ? (
+          <p className="mt-4 border-t border-rule pt-4 text-muted">
+            No contacts here yet. Add one, or pick {c.name} as the company on a contact&apos;s form.
+          </p>
+        ) : (
+          <ul aria-labelledby="people" className="mt-4 border-t border-rule">
+            {people.map((p) => (
+              <li key={p.id} className="border-b border-rule py-3">
+                <Link href={`/contacts/${p.id}`} className="text-accent underline-offset-4 wrap-anywhere hover:underline">{p.name}</Link>
+                {p.jobTitle && <span className="text-sm text-muted"> · {p.jobTitle}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <div className="mt-8 flex items-center gap-3">
         <Link href={`/companies/${c.id}/edit`} className="inline-flex h-10 items-center rounded-sm border border-rule bg-panel px-4 text-sm font-medium text-ink hover:border-ink">
           Edit
         </Link>
-        <DeleteCompany id={c.id} name={c.name} />
+        <DeleteCompany id={c.id} name={c.name} contacts={people.length} />
       </div>
     </main>
   );

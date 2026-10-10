@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTestDb } from "@/test/db";
 import type { Db } from "@/lib/db/client";
 import { company } from "@/lib/db/schema";
-import { createCompany, deleteCompany, EMPTY_COMPANY, getCompany, listCompanies, updateCompany } from "./companies";
+import {
+  createCompany, deleteCompany, EMPTY_COMPANY, getCompany, listCompanies, listCompanyChoices, listCompanyContacts, updateCompany,
+} from "./companies";
+import { createContact, EMPTY_CONTACT, getContact, listContacts } from "./contacts";
 
 let t: { db: Db; close(): Promise<void> };
 beforeEach(async () => { t = await createTestDb(); });
@@ -73,5 +76,41 @@ describe("deleting a company", () => {
     expect(await deleteCompany(t.db, "not-an-id")).toBe(false);
     expect(await getCompany(t.db, "not-an-id")).toBeNull();
     expect(await listCompanies(t.db)).toHaveLength(1);
+  });
+});
+
+describe("a company's contacts", () => {
+  it("lists the people at that company only, A to Z", async () => {
+    const lynn = (await createCompany(t.db, LYNN)).id!;
+    const norwich = (await createCompany(t.db, { ...EMPTY_COMPANY, name: "Norwich Masons" })).id!;
+    await createContact(t.db, { ...EMPTY_CONTACT, name: "Wat Tyler", jobTitle: "Master tiler", companyId: lynn });
+    await createContact(t.db, { ...EMPTY_CONTACT, name: "Agnes Paston", companyId: lynn });
+    await createContact(t.db, { ...EMPTY_CONTACT, name: "Julian", companyId: norwich });
+    await createContact(t.db, { ...EMPTY_CONTACT, name: "Margery Kempe" });
+    expect((await listCompanyContacts(t.db, lynn)).map((c) => [c.name, c.jobTitle])).toEqual([
+      ["Agnes Paston", null],
+      ["Wat Tyler", "Master tiler"],
+    ]);
+    expect(await listCompanyContacts(t.db, "not-an-id")).toEqual([]);
+  });
+
+  it("deleting the company keeps its contacts, with no company", async () => {
+    const lynn = (await createCompany(t.db, LYNN)).id!;
+    const { id } = await createContact(t.db, { ...EMPTY_CONTACT, name: "Wat Tyler", companyId: lynn });
+    await createContact(t.db, { ...EMPTY_CONTACT, name: "Agnes Paston", companyId: lynn });
+    expect(await deleteCompany(t.db, lynn)).toBe(true);
+    expect(await getContact(t.db, id!)).toMatchObject({ name: "Wat Tyler", companyId: null, companyName: null });
+    expect((await listContacts(t.db)).map((c) => [c.name, c.companyId])).toEqual([["Agnes Paston", null], ["Wat Tyler", null]]);
+  });
+});
+
+describe("the company picker's choices", () => {
+  it("are every company A to Z, with the website to tell them apart", async () => {
+    await createCompany(t.db, { ...EMPTY_COMPANY, name: "Norwich Masons" });
+    await createCompany(t.db, LYNN);
+    expect((await listCompanyChoices(t.db)).map(({ name, website }) => [name, website])).toEqual([
+      ["Lynn Tilers", "lynntilers.example"],
+      ["Norwich Masons", null],
+    ]);
   });
 });

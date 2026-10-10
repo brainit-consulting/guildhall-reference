@@ -1,19 +1,25 @@
 // Contacts (B7): the people the business deals with. Plain functions on `db`, so the pages and later the MCP tools
 // (add_contact, get_contact) share one set of rules.
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, getTableColumns } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
-import { contact } from "@/lib/db/schema";
+import { company, contact } from "@/lib/db/schema";
 import { authErrorMessage, isEmail } from "@/lib/auth/messages";
 
 export type Contact = typeof contact.$inferSelect;
+// A contact as the pages show it: with its company's name, null when it has none.
+export type ContactWithCompany = Contact & { companyName: string | null };
 
-// What the form sends: every field as typed.
-export type ContactInput = { name: string; email: string; phone: string; jobTitle: string; notes: string };
-export type ContactValues = { name: string; email: string | null; phone: string | null; jobTitle: string | null; notes: string | null };
-export type ContactErrors = Partial<Record<"name" | "email", string>>;
+// What the form sends: every field as typed. companyId is "" for no company.
+export type ContactInput = { name: string; email: string; phone: string; jobTitle: string; notes: string; companyId: string };
+export type ContactValues = {
+  name: string; email: string | null; phone: string | null; jobTitle: string | null; notes: string | null; companyId: string | null;
+};
+export type ContactErrors = Partial<Record<"name" | "email" | "companyId", string>>;
 
-export const EMPTY_CONTACT: ContactInput = { name: "", email: "", phone: "", jobTitle: "", notes: "" };
+export const EMPTY_CONTACT: ContactInput = { name: "", email: "", phone: "", jobTitle: "", notes: "", companyId: "" };
+
+const COMPANY_GONE = "That company isn't in Guildhall any more. Pick another, or No company.";
 
 const orNull = (s: string) => s.trim() || null;
 
@@ -24,24 +30,39 @@ export function checkContact(input: ContactInput): { values: ContactValues; erro
   const email = orNull(input.email);
   if (!name) errors.name = "Enter a name.";
   if (email && !isEmail(email)) errors.email = authErrorMessage("INVALID_EMAIL");
-  if (errors.name || errors.email) return { values: null, errors };
+  const companyId = orNull(input.companyId);
+  if (companyId && !isId(companyId)) errors.companyId = COMPANY_GONE; // only a tampered form sends this
+  if (errors.name || errors.email || errors.companyId) return { values: null, errors };
   return {
-    values: { name, email, phone: orNull(input.phone), jobTitle: orNull(input.jobTitle), notes: input.notes.trim() || null },
+    values: { name, email, phone: orNull(input.phone), jobTitle: orNull(input.jobTitle), notes: input.notes.trim() || null, companyId },
     errors: null,
   };
 }
 
-// Ids come from the URL or a form; anything that isn't a uuid can't be a contact, and Postgres would reject it.
-const isId = (id: string) => z.uuid().safeParse(id).success;
-
-export async function listContacts(db: Db): Promise<Contact[]> {
-  return db.select().from(contact).orderBy(desc(contact.createdAt), desc(contact.id));
+// Ids come from the URL or a form; anything that isn't a uuid can't be a record, and Postgres would reject it.
+function isId(id: string) {
+  return z.uuid().safeParse(id).success;
 }
 
-export async function getContact(db: Db, id: string): Promise<Contact | null> {
+const withCompany = { ...getTableColumns(contact), companyName: company.name };
+
+export async function listContacts(db: Db): Promise<ContactWithCompany[]> {
+  return db.select(withCompany).from(contact).leftJoin(company, eq(contact.companyId, company.id))
+    .orderBy(desc(contact.createdAt), desc(contact.id));
+}
+
+export async function getContact(db: Db, id: string): Promise<ContactWithCompany | null> {
   if (!isId(id)) return null;
-  const [found] = await db.select().from(contact).where(eq(contact.id, id)).limit(1);
+  const [found] = await db.select(withCompany).from(contact).leftJoin(company, eq(contact.companyId, company.id))
+    .where(eq(contact.id, id)).limit(1);
   return found ?? null;
+}
+
+// The company may have been deleted while the form was open; say so rather than fail on the foreign key.
+async function companyGone(db: Db, companyId: string | null): Promise<ContactErrors | null> {
+  if (!companyId) return null;
+  const [found] = await db.select({ id: company.id }).from(company).where(eq(company.id, companyId)).limit(1);
+  return found ? null : { companyId: COMPANY_GONE };
 }
 
 type Saved = { id: string; errors: null } | { id: null; errors: ContactErrors };
@@ -49,6 +70,8 @@ type Saved = { id: string; errors: null } | { id: null; errors: ContactErrors };
 export async function createContact(db: Db, input: ContactInput): Promise<Saved> {
   const checked = checkContact(input);
   if (checked.errors) return { id: null, errors: checked.errors };
+  const gone = await companyGone(db, checked.values.companyId);
+  if (gone) return { id: null, errors: gone };
   const [row] = await db.insert(contact).values(checked.values).returning({ id: contact.id });
   return { id: row.id, errors: null };
 }
@@ -58,6 +81,8 @@ export async function updateContact(db: Db, id: string, input: ContactInput): Pr
   if (!isId(id)) return null;
   const checked = checkContact(input);
   if (checked.errors) return { id: null, errors: checked.errors };
+  const gone = await companyGone(db, checked.values.companyId);
+  if (gone) return { id: null, errors: gone };
   const [row] = await db.update(contact).set({ ...checked.values, updatedAt: new Date() })
     .where(eq(contact.id, id)).returning({ id: contact.id });
   return row ? { id: row.id, errors: null } : null;

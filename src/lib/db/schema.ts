@@ -72,20 +72,6 @@ export const allowedEmail = pgTable("allowed_email", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// B7: the people the business deals with. Optional fields are null when left blank, never "".
-export const contact = pgTable("contact", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  email: text("email"),
-  phone: text("phone"),
-  jobTitle: text("job_title"),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-}, (t) => [
-  index("contact_created_at").on(t.createdAt),
-]);
-
 // B8: the businesses those people work for. Optional fields are null when left blank, never "".
 export const company = pgTable("company", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -97,4 +83,21 @@ export const company = pgTable("company", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => [
   index("company_created_at").on(t.createdAt),
+]);
+
+// B7: the people the business deals with. Optional fields are null when left blank, never "".
+export const contact = pgTable("contact", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  jobTitle: text("job_title"),
+  notes: text("notes"),
+  // B8: deleting a company keeps its contacts; they just have no company any more.
+  companyId: uuid("company_id").references(() => company.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("contact_created_at").on(t.createdAt),
+  index("contact_company_id").on(t.companyId),
 ]);

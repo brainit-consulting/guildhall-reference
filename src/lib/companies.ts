@@ -1,9 +1,9 @@
 // Companies (B8): the businesses contacts work for. Plain functions on `db`, so the pages and later the MCP tools
 // (get_company) share one set of rules.
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
-import { company } from "@/lib/db/schema";
+import { company, contact } from "@/lib/db/schema";
 
 export type Company = typeof company.$inferSelect;
 
@@ -52,6 +52,21 @@ export async function getCompany(db: Db, id: string): Promise<Company | null> {
   return found ?? null;
 }
 
+// What the contact form's Company picker offers, A to Z. The website tells two companies of one name apart.
+export type CompanyChoice = { id: string; name: string; website: string | null };
+
+export async function listCompanyChoices(db: Db): Promise<CompanyChoice[]> {
+  return db.select({ id: company.id, name: company.name, website: company.website }).from(company)
+    .orderBy(asc(company.name), asc(company.id));
+}
+
+// The people at a company, A to Z, for its page.
+export async function listCompanyContacts(db: Db, companyId: string) {
+  if (!isId(companyId)) return [];
+  return db.select({ id: contact.id, name: contact.name, jobTitle: contact.jobTitle, email: contact.email }).from(contact)
+    .where(eq(contact.companyId, companyId)).orderBy(asc(contact.name), asc(contact.id));
+}
+
 type Saved = { id: string; errors: null } | { id: null; errors: CompanyErrors };
 
 export async function createCompany(db: Db, input: CompanyInput): Promise<Saved> {
@@ -71,6 +86,7 @@ export async function updateCompany(db: Db, id: string, input: CompanyInput): Pr
   return row ? { id: row.id, errors: null } : null;
 }
 
+// Deleting a company keeps its contacts: the foreign key sets their company to null (schema.ts).
 export async function deleteCompany(db: Db, id: string): Promise<boolean> {
   if (!isId(id)) return false;
   const gone = await db.delete(company).where(eq(company.id, id)).returning({ id: company.id });

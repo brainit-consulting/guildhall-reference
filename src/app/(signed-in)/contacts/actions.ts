@@ -12,7 +12,7 @@ export type ContactFormState = { errors: ContactErrors; values: ContactInput; at
 
 function read(form: FormData): ContactInput {
   const field = (name: string) => String(form.get(name) ?? "");
-  return { name: field("name"), email: field("email"), phone: field("phone"), jobTitle: field("jobTitle"), notes: field("notes") };
+  return { name: field("name"), email: field("email"), phone: field("phone"), jobTitle: field("jobTitle"), notes: field("notes"), companyId: field("companyId") };
 }
 
 export async function createContactAction(prev: ContactFormState, form: FormData): Promise<ContactFormState> {

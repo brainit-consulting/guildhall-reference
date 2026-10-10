@@ -5,18 +5,21 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { CompanyChoice } from "@/lib/companies";
 import type { ContactInput } from "@/lib/contacts";
 import type { ContactFormState } from "./actions";
+import { CompanyPicker } from "./company-picker";
 
 type Props = {
   action: (prev: ContactFormState, form: FormData) => Promise<ContactFormState>;
   initial: ContactInput;
+  companies: CompanyChoice[];
   submitLabel: string;
   cancelHref: string;
 };
 
 // Add and Edit share this form: one column, labels above fields, the button at the bottom left (DESIGN.md).
-export function ContactForm({ action, initial, submitLabel, cancelHref }: Props) {
+export function ContactForm({ action, initial, companies, submitLabel, cancelHref }: Props) {
   const [state, formAction, pending] = useActionState(action, { errors: {}, values: initial, attempt: 0 });
   const { errors, values } = state;
 
@@ -32,6 +35,10 @@ export function ContactForm({ action, initial, submitLabel, cancelHref }: Props)
       </Field>
       <Field id="phone" label="Phone">
         <Input id="phone" name="phone" type="tel" defaultValue={values.phone} autoComplete="off" />
+      </Field>
+      <Field id="company" label="Company" error={errors.companyId}>
+        <CompanyPicker id="company" name="companyId" companies={companies} defaultId={values.companyId}
+          invalid={!!errors.companyId} describedBy={errors.companyId ? "company-error" : undefined} />
       </Field>
       <Field id="jobTitle" label="Job title">
         <Input id="jobTitle" name="jobTitle" defaultValue={values.jobTitle} autoComplete="off" />

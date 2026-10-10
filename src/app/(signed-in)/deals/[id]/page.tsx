@@ -9,6 +9,7 @@ import { formatMoney } from "@/lib/money";
 import { StageName } from "../stage-name";
 import { DeleteDeal } from "./delete-deal";
 import { Activities } from "../../_activities/activities";
+import { DaysAgo } from "../../_activities/days-ago";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   await requireSession(); // the title holds the deal's name, so it is guarded like the page
@@ -23,6 +24,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const d = await getDeal(db, id);
   if (!d) notFound();
+  const now = new Date().toISOString();
 
   // [label, value, what a blank one says]
   const fields: [string, React.ReactNode, string?][] = [
@@ -31,6 +33,8 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
     ["Contact", d.contactId ? <Link href={`/contacts/${d.contactId}`} className={link}>{d.contactName}</Link> : null, "No contact"],
     ["Company", d.companyId ? <Link href={`/companies/${d.companyId}`} className={link}>{d.companyName}</Link> : null, "No company"],
     ["Expected close", d.expectedClose && formatDay(d.expectedClose)],
+    // on the deal, its contact or its company
+    ["Last activity", d.lastActivityAt && <DaysAgo key="last" at={d.lastActivityAt.toISOString()} now={now} />, "Nothing logged yet"],
   ];
 
   return (

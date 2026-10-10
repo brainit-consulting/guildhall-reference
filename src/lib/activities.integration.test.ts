@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTestDb } from "@/test/db";
 import type { Db } from "@/lib/db/client";
-import { activity, user } from "@/lib/db/schema";
+import { activity, deal, user } from "@/lib/db/schema";
 import { addActivity, listActivities, logActivity, type ActivityTarget } from "./activities";
 import { createCompany, deleteCompany, EMPTY_COMPANY } from "./companies";
 import { createContact, deleteContact, EMPTY_CONTACT } from "./contacts";
-import { createDeal, deleteDeal, EMPTY_DEAL } from "./deals";
+import { createDeal, deleteDeal, EMPTY_DEAL, getDeal } from "./deals";
 
 let t: { db: Db; close(): Promise<void> };
 beforeEach(async () => { t = await createTestDb(); });
@@ -73,6 +73,51 @@ describe("logging an activity", () => {
     const on = await setUp();
     await expect(t.db.insert(activity).values({ kind: "note", body: "Nowhere" })).rejects.toThrow();
     await expect(t.db.insert(activity).values({ kind: "note", body: "Twice", contactId: on.contact.id, dealId: on.deal.id })).rejects.toThrow();
+  });
+});
+
+describe("a deal's last activity", () => {
+  const lastActivity = async (id: string) => (await getDeal(t.db, id))!.lastActivityAt;
+  const loggedAt = async (id: string) => (await t.db.select().from(activity)).find((a) => a.id === id)!.createdAt;
+
+  it("is nothing until something is logged", async () => {
+    const on = await setUp();
+    expect(await lastActivity(on.deal.id)).toBeNull();
+    await logActivity(t.db, on.contact, "u1", { kind: "call", body: " " }); // refused, so not activity
+    expect(await lastActivity(on.deal.id)).toBeNull();
+  });
+
+  it("is when a call was logged on the deal's contact, and only that contact's deals move", async () => {
+    const on = await setUp();
+    const otherContact = (await createContact(t.db, { ...EMPTY_CONTACT, name: "Jack Straw" })).id!;
+    const otherDeal = (await createDeal(t.db, { ...EMPTY_DEAL, title: "Mend the gate", contactId: otherContact })).id!;
+    const { id } = await logActivity(t.db, on.contact, "u1", { kind: "call", body: "Rang about the roof." });
+    expect(await lastActivity(on.deal.id)).toEqual(await loggedAt(id!));
+    expect(await lastActivity(otherDeal)).toBeNull();
+  });
+
+  it("is when something was logged on the deal itself or on its company", async () => {
+    const on = await setUp();
+    const onDeal = await logActivity(t.db, on.deal, "u1", { kind: "note", body: "Sent the quote." });
+    expect(await lastActivity(on.deal.id)).toEqual(await loggedAt(onDeal.id!));
+    const onCompany = await logActivity(t.db, on.company, "u1", { kind: "meeting", body: "Met at the yard." });
+    expect(await lastActivity(on.deal.id)).toEqual(await loggedAt(onCompany.id!));
+  });
+
+  it("touches every deal of that contact or company", async () => {
+    const on = await setUp();
+    const second = (await createDeal(t.db, { ...EMPTY_DEAL, title: "Porch", companyId: on.company.id })).id!;
+    const { id } = await logActivity(t.db, on.company, "u1", { kind: "call", body: "Rang the office." });
+    expect(await lastActivity(on.deal.id)).toEqual(await loggedAt(id!));
+    expect(await lastActivity(second)).toEqual(await loggedAt(id!));
+  });
+
+  it("never goes back in time", async () => {
+    const on = await setUp();
+    const later = new Date("2099-01-01T00:00:00Z");
+    await t.db.update(deal).set({ lastActivityAt: later });
+    await logActivity(t.db, on.contact, "u1", { kind: "call", body: "Rang" });
+    expect(await lastActivity(on.deal.id)).toEqual(later);
   });
 });
 

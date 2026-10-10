@@ -3,6 +3,7 @@
 import { count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
+import { addActivity } from "@/lib/activities";
 import { company, contact, deal } from "@/lib/db/schema";
 import { DEAL_STAGES, OPEN_STAGES, type DealStage } from "@/lib/deal-stages";
 import { parseMoney } from "@/lib/money";
@@ -118,31 +119,55 @@ export async function createDeal(db: Db, input: DealInput): Promise<Saved> {
   return { id: row.id, errors: null };
 }
 
+// "Moved from Contacted to Proposal": what a stage change says on the deal's timeline (B11).
+export function stageChangeText(from: DealStage, to: DealStage): string {
+  return `Moved from ${from} to ${to}`;
+}
+
+// Sets a deal's fields and returns the stage it had, read by the same statement under a row lock, so two people
+// moving one deal at once each log the move they actually made. null when the deal isn't there.
+async function setDeal(db: Db, id: string, values: Partial<DealValues>): Promise<DealStage | null> {
+  const old = db.select({ id: deal.id, stage: deal.stage }).from(deal).where(eq(deal.id, id)).for("update").as("old");
+  const [row] = await db.update(deal).set({ ...values, updatedAt: new Date() })
+    .from(old).where(eq(deal.id, old.id)).returning({ from: old.stage });
+  return row?.from ?? null;
+}
+
+// Every stage change, from the board, the form or later the MCP tools, is logged on the deal by who made it (null
+// when nobody signed in did). Also counts as the deal's last activity, like any activity on it.
+async function logStageChange(db: Db, id: string, userId: string | null, from: DealStage, to: DealStage) {
+  if (from === to) return;
+  await addActivity(db, { type: "deal", id }, userId, { kind: "stage_change", body: stageChangeText(from, to) });
+}
+
 // null when there is no such deal (deleted in another tab, or a tampered id).
-export async function updateDeal(db: Db, id: string, input: DealInput): Promise<Saved | null> {
+export async function updateDeal(db: Db, id: string, input: DealInput, userId: string | null): Promise<Saved | null> {
   if (!isId(id)) return null;
   const checked = checkDeal(input);
   if (checked.errors) return { id: null, errors: checked.errors };
   const gone = await linksGone(db, checked.values);
   if (gone) return { id: null, errors: gone };
-  const [row] = await db.update(deal).set({ ...checked.values, updatedAt: new Date() })
-    .where(eq(deal.id, id)).returning({ id: deal.id });
-  return row ? { id: row.id, errors: null } : null;
+  const from = await setDeal(db, id, checked.values);
+  if (!from) return null;
+  await logStageChange(db, id, userId, from, checked.values.stage);
+  return { id, errors: null };
 }
 
-// Moves a deal to another stage (the pipeline board; later the MCP move_deal_stage tool). Returns the stage it left
-// and the one it reached, so a caller can log "Moved from X to Y"; null for no such deal or no such stage. Moving to
-// the stage it is already in changes nothing.
-export async function moveDealStage(db: Db, id: string, stage: string): Promise<{ from: DealStage; to: DealStage } | null> {
+// Moves a deal to another stage (the pipeline board; later the MCP move_deal_stage tool) and logs the move. Returns
+// the stage it left and the one it reached; null for no such deal or no such stage. Moving to the stage it is already
+// in changes and logs nothing.
+export async function moveDealStage(
+  db: Db, id: string, stage: string, userId: string | null,
+): Promise<{ from: DealStage; to: DealStage } | null> {
   const to = DEAL_STAGES.find((s) => s === stage);
   if (!to || !isId(id)) return null;
   const [found] = await db.select({ stage: deal.stage }).from(deal).where(eq(deal.id, id)).limit(1);
   if (!found) return null;
-  if (found.stage !== to) {
-    const [moved] = await db.update(deal).set({ stage: to, updatedAt: new Date() }).where(eq(deal.id, id)).returning({ id: deal.id });
-    if (!moved) return null; // deleted in between
-  }
-  return { from: found.stage, to };
+  if (found.stage === to) return { from: to, to };
+  const from = await setDeal(db, id, { stage: to });
+  if (!from) return null; // deleted in between
+  await logStageChange(db, id, userId, from, to);
+  return { from, to };
 }
 
 export async function deleteDeal(db: Db, id: string): Promise<boolean> {

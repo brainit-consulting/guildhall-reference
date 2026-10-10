@@ -6,12 +6,14 @@ import { db } from "@/lib/db/client";
 import { listDeals, openDealsTotal, type DealWithNames } from "@/lib/deals";
 import { formatMoney } from "@/lib/money";
 import { StageName } from "./stage-name";
+import { DaysAgo } from "../_activities/days-ago";
 
 export const metadata: Metadata = { title: "Deals · Guildhall" };
 
 export default async function DealsPage() {
   await requireSession();
   const [deals, open] = await Promise.all([listDeals(db), openDealsTotal(db)]);
+  const now = new Date().toISOString();
   return (
     <main className="max-w-5xl px-6 py-12 md:px-12">
       <div className="flex flex-wrap items-baseline justify-between gap-4">
@@ -56,6 +58,7 @@ export default async function DealsPage() {
                 {d.expectedClose && (
                   <p className="mt-1 text-sm text-ink"><span className="text-muted">Expected close:</span> {formatDay(d.expectedClose)}</p>
                 )}
+                <p className="mt-1 text-sm text-ink"><span className="text-muted">Last activity:</span> <LastActivity d={d} now={now} /></p>
               </li>
             ))}
           </ul>
@@ -69,6 +72,7 @@ export default async function DealsPage() {
                   <th scope="col" className="px-3 py-2 text-right font-medium">Value</th>
                   <th scope="col" className="px-3 py-2 font-medium">Stage</th>
                   <th scope="col" className="px-3 py-2 font-medium">Expected close</th>
+                  <th scope="col" className="px-3 py-2 font-medium">Last activity</th>
                 </tr>
               </thead>
               <tbody>
@@ -81,6 +85,7 @@ export default async function DealsPage() {
                     <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink">{d.value && formatMoney(d.value)}</td>
                     <td className="px-3 py-2"><StageName stage={d.stage} /></td>
                     <td className="whitespace-nowrap px-3 py-2 text-ink">{d.expectedClose && formatDay(d.expectedClose)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-ink"><LastActivity d={d} now={now} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -90,6 +95,10 @@ export default async function DealsPage() {
       )}
     </main>
   );
+}
+
+function LastActivity({ d, now }: { d: DealWithNames; now: string }) {
+  return d.lastActivityAt ? <DaysAgo at={d.lastActivityAt.toISOString()} now={now} /> : <span className="text-muted">Nothing logged</span>;
 }
 
 function CompanyLink({ d }: { d: DealWithNames }) {

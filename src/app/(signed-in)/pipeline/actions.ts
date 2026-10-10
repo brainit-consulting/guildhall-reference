@@ -8,7 +8,7 @@ import { moveDealStage } from "@/lib/deals";
 // Checks the session itself: server actions can be called by anyone who can send a POST. Refreshes either way, so a
 // card moved after its deal was deleted elsewhere drops off the board rather than staying where it was put.
 export async function moveDealAction(id: string, stage: string): Promise<void> {
-  await requireSession();
-  await moveDealStage(db, id, stage);
+  const { user } = await requireSession();
+  await moveDealStage(db, id, stage, user.id); // logged on the deal as theirs
   refresh();
 }

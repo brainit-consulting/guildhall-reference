@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkDeal, DEAL_STAGES, EMPTY_DEAL, isOpen } from "./deals";
+import { checkDeal, DEAL_STAGES, EMPTY_DEAL, isOpen, stageChangeText } from "./deals";
 
 const ID = "6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b";
 
@@ -38,5 +38,11 @@ describe("checkDeal", () => {
       .toEqual({ expectedClose: "Enter a date, like 12 Oct 2026." });
     expect(checkDeal({ ...EMPTY_DEAL, title: "Gutters", contactId: "7", companyId: "x" }).errors)
       .toEqual({ contactId: expect.any(String), companyId: expect.any(String) });
+  });
+});
+
+describe("stageChangeText", () => {
+  it("says where the deal came from and went", () => {
+    expect(stageChangeText("Contacted", "Proposal")).toBe("Moved from Contacted to Proposal");
   });
 });

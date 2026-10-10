@@ -27,9 +27,9 @@ export async function createDealAction(prev: DealFormState, form: FormData): Pro
 }
 
 export async function updateDealAction(id: string, prev: DealFormState, form: FormData): Promise<DealFormState> {
-  await requireSession();
+  const { user } = await requireSession();
   const values = read(form);
-  const saved = await updateDeal(db, id, values);
+  const saved = await updateDeal(db, id, values, user.id); // a new stage is logged as theirs
   if (!saved) redirect("/deals"); // deleted meanwhile
   if (saved.errors) return { errors: saved.errors, values, attempt: prev.attempt + 1 };
   redirect(`/deals/${id}`);

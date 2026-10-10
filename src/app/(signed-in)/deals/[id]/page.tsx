@@ -8,6 +8,7 @@ import { getDeal } from "@/lib/deals";
 import { formatMoney } from "@/lib/money";
 import { StageName } from "../stage-name";
 import { DeleteDeal } from "./delete-deal";
+import { Activities } from "../../_activities/activities";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   await requireSession(); // the title holds the deal's name, so it is guarded like the page
@@ -52,6 +53,8 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
         </Link>
         <DeleteDeal id={d.id} name={d.title} />
       </div>
+
+      <Activities target={{ type: "deal", id: d.id }} />
     </main>
   );
 }

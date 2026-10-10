@@ -9,6 +9,7 @@ import { formatMoney } from "@/lib/money";
 import { StageName } from "../stage-name";
 import { DeleteDeal } from "./delete-deal";
 import { Activities } from "../../_activities/activities";
+import { Tasks } from "../../_tasks/tasks";
 import { DaysAgo } from "../../_activities/days-ago";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -58,6 +59,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
         <DeleteDeal id={d.id} name={d.title} />
       </div>
 
+      <Tasks target={{ type: "deal", id: d.id }} />
       <Activities target={{ type: "deal", id: d.id }} />
     </main>
   );

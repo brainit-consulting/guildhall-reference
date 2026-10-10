@@ -4,6 +4,7 @@ import { count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
 import { addActivity } from "@/lib/activities";
+import { isDay } from "@/lib/dates";
 import { company, contact, deal } from "@/lib/db/schema";
 import { DEAL_STAGES, OPEN_STAGES, type DealStage } from "@/lib/deal-stages";
 import { parseMoney } from "@/lib/money";
@@ -31,13 +32,6 @@ const orNull = (s: string) => s.trim() || null;
 
 // Ids come from the URL or a form; anything that isn't a uuid can't be a record, and Postgres would reject it.
 const isId = (id: string) => z.uuid().safeParse(id).success;
-
-// A real calendar day: "2026-02-30" is refused rather than rolled into March.
-function isDay(s: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
-  const d = new Date(`${s}T00:00:00Z`);
-  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
-}
 
 // Trims each field, turns blanks into null and money into "1234.50"; a sentence per field the form must explain.
 export function checkDeal(input: DealInput): { values: DealValues; errors: null } | { values: null; errors: DealErrors } {

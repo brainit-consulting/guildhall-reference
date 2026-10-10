@@ -42,7 +42,8 @@ export function checkActivity(input: ActivityInput):
 const column = { contact: activity.contactId, company: activity.companyId, deal: activity.dealId } as const;
 const table = { contact, company, deal } as const;
 
-async function exists(db: Db, target: ActivityTarget): Promise<boolean> {
+// Whether the contact, company or deal is still in Guildhall. Tasks use it too.
+export async function exists(db: Db, target: ActivityTarget): Promise<boolean> {
   if (!isId(target.id)) return false;
   const t = table[target.type];
   const [found] = await db.select({ id: t.id }).from(t).where(eq(t.id, target.id)).limit(1);

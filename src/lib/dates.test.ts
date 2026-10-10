@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysAgo, formatDay } from "./dates";
+import { daysAgo, formatDay, isDay } from "./dates";
 
 describe("formatDay", () => {
   it("shows a calendar day as 12 Oct 2026", () => {
@@ -25,5 +25,15 @@ describe("daysAgo", () => {
 
   it("calls a day after today today", () => {
     expect(daysAgo("2026-10-13", "2026-10-12")).toBe("today");
+  });
+});
+
+describe("isDay", () => {
+  it("takes a real calendar day as YYYY-MM-DD and nothing else", () => {
+    expect(isDay("2026-10-12")).toBe(true);
+    expect(isDay("2028-02-29")).toBe(true);
+    for (const s of ["", "2026-02-30", "2027-02-29", "2026-13-01", "2026-10-1", "12 Oct 2026", "2026-10-12T00:00"]) {
+      expect(isDay(s)).toBe(false);
+    }
   });
 });

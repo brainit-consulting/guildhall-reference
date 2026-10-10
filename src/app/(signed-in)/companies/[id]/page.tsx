@@ -5,6 +5,7 @@ import { requireSession } from "@/lib/auth/session";
 import { getCompany, listCompanyContacts, websiteHref } from "@/lib/companies";
 import { db } from "@/lib/db/client";
 import { DeleteCompany } from "./delete-company";
+import { Activities } from "../../_activities/activities";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   await requireSession(); // the title holds the name, so it is guarded like the page
@@ -69,6 +70,8 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
         </Link>
         <DeleteCompany id={c.id} name={c.name} contacts={people.length} />
       </div>
+
+      <Activities target={{ type: "company", id: c.id }} />
     </main>
   );
 }

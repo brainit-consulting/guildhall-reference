@@ -5,6 +5,7 @@ import { requireSession } from "@/lib/auth/session";
 import { getContact } from "@/lib/contacts";
 import { db } from "@/lib/db/client";
 import { DeleteContact } from "./delete-contact";
+import { Activities } from "../../_activities/activities";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   await requireSession(); // the title holds the name, so it is guarded like the page
@@ -49,6 +50,8 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
         </Link>
         <DeleteContact id={c.id} name={c.name} />
       </div>
+
+      <Activities target={{ type: "contact", id: c.id }} />
     </main>
   );
 }

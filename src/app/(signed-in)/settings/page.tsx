@@ -12,7 +12,7 @@ export default async function SettingsPage() {
   await requireOwner();
   const allowed = await listAllowedEmails(db);
   return (
-    <main className="mx-auto min-h-screen max-w-2xl px-6 py-12">
+    <main className="max-w-2xl px-6 py-12 md:px-12">
       <h1 className="font-display text-4xl text-ink -ml-px md:-ml-6">Settings</h1>
 
       <section aria-labelledby="sign-up-heading" className="mt-8 border-t border-rule pt-6">

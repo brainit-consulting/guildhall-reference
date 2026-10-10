@@ -12,3 +12,10 @@ export async function requireSession(): Promise<Session> {
   if (!s) redirect("/signin");
   return s;
 }
+
+// Owner-only pages and actions: anyone else is sent home.
+export async function requireOwner(): Promise<Session> {
+  const s = await requireSession();
+  if (s.user.role !== "owner") redirect("/home");
+  return s;
+}

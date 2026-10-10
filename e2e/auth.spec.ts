@@ -46,6 +46,11 @@ test("mistakes on sign-up are explained next to the form", async ({ page }) => {
   await expect(page.locator("form").getByRole("alert")).toHaveText("The password needs at least 8 characters.");
   await expect(page).toHaveURL(/\/signup$/);
 
+  await page.getByLabel("Email").fill("margery-at-lynn");
+  await page.getByLabel("Password").fill("long enough");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.locator("form").getByRole("alert")).toHaveText("That doesn't look like an email address. Check it and try again.");
+
   await page.getByRole("link", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/signin$/);
 });

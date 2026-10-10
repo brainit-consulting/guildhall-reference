@@ -2,10 +2,12 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/lib/db/client";
+import * as schema from "@/lib/db/schema";
 import { env } from "@/lib/env";
 
 export const auth = betterAuth({
-  database: drizzleAdapter(db, { provider: "pg" }),
+  // the schema passed here keeps Better-Auth from reading db at start-up, so only a real query opens the database
+  database: drizzleAdapter(db, { provider: "pg", schema }),
   secret: env.authSecret,
   baseURL: env.authUrl,
   trustedOrigins: env.trustedOrigins,

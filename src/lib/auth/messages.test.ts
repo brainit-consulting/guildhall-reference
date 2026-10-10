@@ -15,6 +15,12 @@ describe("checkAuthForm", () => {
     expect(checkAuthForm({ ...ok, password: "" }, "signin")).toBe("Enter your password.");
   });
 
+  it("explains an email that isn't one, before sending", () => {
+    for (const email of ["margery-at-lynn", "margery@lynn", "margery @lynn.com"]) {
+      expect(checkAuthForm({ ...ok, email }, "signup"), email).toBe(authErrorMessage("INVALID_EMAIL"));
+    }
+  });
+
   it("wants at least 8 characters on sign-up only", () => {
     expect(checkAuthForm({ ...ok, password: "1234567" }, "signup")).toContain("8 characters");
     expect(checkAuthForm({ email: ok.email, password: "1234567" }, "signin")).toBeNull();
@@ -33,6 +39,11 @@ describe("authErrorMessage", () => {
 
   it("names the password length", () => {
     expect(authErrorMessage("PASSWORD_TOO_SHORT")).toContain("8 characters");
+  });
+
+  it("says sign-up's validation error in plain words, not the fallback", () => {
+    expect(authErrorMessage("VALIDATION_ERROR")).not.toBe(FALLBACK_MESSAGE);
+    expect(authErrorMessage("VALIDATION_ERROR")).toMatch(/Check your name, email and password/);
   });
 
   it("falls back for unknown or missing codes", () => {

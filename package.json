@@ -17,7 +17,7 @@
     "test": "vitest run --reporter=default",
     "test:unit": "vitest run --project unit --reporter=default",
     "test:integration": "vitest run --project integration --reporter=default",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test && node scripts/check-e2e-data.mjs",
     "e2e:server": "node scripts/clean-e2e-data.mjs && npm run dev",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",

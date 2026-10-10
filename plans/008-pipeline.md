@@ -28,7 +28,8 @@ moves on the frame it is dropped, the server action saves it and calls `refresh(
 ### Task 1: Rules and data
 
 - [x] **Step 1:** `addMoney` in `money.ts`; tests.
-- [x] **Step 2:** `moveDealStage` and `pipelineColumns` in `deals.ts`; unit and integration tests.
+- [x] **Step 2:** `moveDealStage` in `deals.ts`, `pipelineColumns` in `pipeline.ts` (no database imports); unit and
+  integration tests.
 
 ### Task 2: The page
 

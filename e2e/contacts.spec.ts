@@ -100,27 +100,33 @@ test.describe("as the owner", () => {
 test.describe("at phone width", () => {
   test.use({ storageState: OWNER_STATE, viewport: { width: 390, height: 844 } });
 
-  test("the table fits without scrolling sideways, even with a long email", async ({ page }) => {
+  test("contacts are stacked rows that fit, even with a long email", async ({ page }) => {
     const name = `Julian of Norwich ${Date.now()}`;
+    const email = "julian.anchoress.saint.julians.church@conisford-norwich.example";
     await page.goto("/contacts/new");
     await page.getByLabel("Name").fill(name);
-    await page.getByLabel("Email").fill("julian.anchoress.saint.julians.church@conisford-norwich.example");
+    await page.getByLabel("Email").fill(email);
     await page.getByLabel("Phone").fill("01603 767 380");
     await page.getByRole("button", { name: "Add contact" }).click();
     await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible(COLD);
 
     await page.goto("/contacts");
-    const table = page.getByRole("table");
-    await expect(table.getByRole("link", { name, exact: true })).toBeVisible(COLD);
-    // Phone and Job title are left to the contact's page
-    await expect(table.getByRole("columnheader", { name: "Phone" })).toBeHidden();
-    await expect(table.getByRole("columnheader", { name: "Job title" })).toBeHidden();
-    const fits = await table.evaluate((t) => {
-      const box = t.parentElement!;
+    // no table under 768px: one block per contact, the name first as the link, then "Label: value" lines
+    await expect(page.getByRole("table")).toBeHidden();
+    const block = page.getByRole("list", { name: "Contacts" }).getByRole("listitem").filter({ hasText: name });
+    await expect(block.getByRole("link").first()).toHaveText(name, COLD);
+    await expect(block).toContainText(`Email: ${email}`);
+    await expect(block).toContainText("Phone: 01603 767 380");
+    await expect(block).not.toContainText("Job title:"); // left blank, so left out
+
+    const fits = await block.evaluate((li) => {
       const html = document.documentElement;
-      return box.scrollWidth <= box.clientWidth && html.scrollWidth <= html.clientWidth;
+      return li.scrollWidth <= li.clientWidth && html.scrollWidth <= html.clientWidth;
     });
     expect(fits).toBe(true);
+
+    await block.getByRole("link", { name }).click();
+    await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible(COLD);
   });
 });
 

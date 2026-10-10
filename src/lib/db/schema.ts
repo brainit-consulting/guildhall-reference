@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 // ──────────────────────────────────────────────────────────────────
 // Better-Auth core tables (names + column shapes match Better-Auth's
@@ -71,3 +71,17 @@ export const allowedEmail = pgTable("allowed_email", {
   email: text("email").notNull().unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// B7: the people the business deals with. Optional fields are null when left blank, never "".
+export const contact = pgTable("contact", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  jobTitle: text("job_title"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("contact_created_at").on(t.createdAt),
+]);

@@ -1,6 +1,6 @@
 // Contacts (B7): the people the business deals with. Plain functions on `db`, so the pages and later the MCP tools
 // (add_contact, get_contact) share one set of rules.
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { asc, desc, eq, getTableColumns } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
 import { company, contact } from "@/lib/db/schema";
@@ -49,6 +49,14 @@ const withCompany = { ...getTableColumns(contact), companyName: company.name };
 export async function listContacts(db: Db): Promise<ContactWithCompany[]> {
   return db.select(withCompany).from(contact).leftJoin(company, eq(contact.companyId, company.id))
     .orderBy(desc(contact.createdAt), desc(contact.id));
+}
+
+// What the deal form's Contact picker offers, A to Z. The company tells two people of one name apart.
+export type ContactChoice = { id: string; name: string; companyName: string | null };
+
+export async function listContactChoices(db: Db): Promise<ContactChoice[]> {
+  return db.select({ id: contact.id, name: contact.name, companyName: company.name }).from(contact)
+    .leftJoin(company, eq(contact.companyId, company.id)).orderBy(asc(contact.name), asc(contact.id));
 }
 
 export async function getContact(db: Db, id: string): Promise<ContactWithCompany | null> {

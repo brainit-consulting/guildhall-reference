@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { DEAL_STAGES } from "../deal-stages";
+import { pgEnum, pgTable, text, timestamp, boolean, date, index, numeric, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 // ──────────────────────────────────────────────────────────────────
 // Better-Auth core tables (names + column shapes match Better-Auth's
@@ -100,4 +101,26 @@ export const contact = pgTable("contact", {
 }, (t) => [
   index("contact_created_at").on(t.createdAt),
   index("contact_company_id").on(t.companyId),
+]);
+
+// B9: the fixed stages, in order (src/lib/deal-stages.ts).
+export const dealStage = pgEnum("deal_stage", DEAL_STAGES);
+
+// B9: work the business hopes to win. Value is exact money, a string in TypeScript; null when not known.
+export const deal = pgTable("deal", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  value: numeric("value", { precision: 12, scale: 2 }),
+  stage: dealStage("stage").notNull().default("New"),
+  // deleting the contact or company keeps the deal
+  contactId: uuid("contact_id").references(() => contact.id, { onDelete: "set null" }),
+  companyId: uuid("company_id").references(() => company.id, { onDelete: "set null" }),
+  expectedClose: date("expected_close", { mode: "string" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("deal_created_at").on(t.createdAt),
+  index("deal_by_stage").on(t.stage),
+  index("deal_contact_id").on(t.contactId),
+  index("deal_company_id").on(t.companyId),
 ]);

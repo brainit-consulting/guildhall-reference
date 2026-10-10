@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { DEAL_STAGES } from "../deal-stages";
 import { pgEnum, pgTable, text, timestamp, boolean, date, index, numeric, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 // ──────────────────────────────────────────────────────────────────
@@ -102,8 +103,8 @@ export const contact = pgTable("contact", {
   index("contact_company_id").on(t.companyId),
 ]);
 
-// B9: the fixed stages, in order. "Open" means New, Contacted or Proposal.
-export const dealStage = pgEnum("deal_stage", ["New", "Contacted", "Proposal", "Won", "Lost"]);
+// B9: the fixed stages, in order (src/lib/deal-stages.ts).
+export const dealStage = pgEnum("deal_stage", DEAL_STAGES);
 
 // B9: work the business hopes to win. Value is exact money, a string in TypeScript; null when not known.
 export const deal = pgTable("deal", {

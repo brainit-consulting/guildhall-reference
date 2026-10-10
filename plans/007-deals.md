@@ -1,6 +1,6 @@
 # 007 — Deals
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-10
 
@@ -40,21 +40,21 @@ combobox moves to `src/components/record-picker.tsx` and the company picker beco
 
 ### Task 3: Pages
 
-- [ ] **Step 1:** Deals in `MENU`, after Companies.
-- [ ] **Step 2:** `record-picker.tsx`; company picker wraps it; a contact picker for deals.
-- [ ] **Step 3:** `/deals`: open count and total, the table (stacked rows under 768px), the empty state.
-- [ ] **Step 4:** `/deals/new` and `/deals/[id]/edit` sharing `deal-form.tsx`; `/deals/[id]` with Edit and Delete.
+- [x] **Step 1:** Deals in `MENU`, after Companies.
+- [x] **Step 2:** `record-picker.tsx`; company picker wraps it; a contact picker for deals.
+- [x] **Step 3:** `/deals`: open count and total, the table (stacked rows under 768px), the empty state.
+- [x] **Step 4:** `/deals/new` and `/deals/[id]/edit` sharing `deal-form.tsx`; `/deals/[id]` with Edit and Delete.
 
 ### Task 4: Tests and checks
 
-- [ ] **Step 1:** `e2e/deals.spec.ts`: add, edit, delete, the open total; a missing title and a bad value are
+- [x] **Step 1:** `e2e/deals.spec.ts`: add, edit, delete, the open total; a missing title and a bad value are
   explained; phone width; signed out goes to sign-in.
-- [ ] **Step 2:** typecheck, lint, test, test:e2e, build; tried in a browser.
+- [x] **Step 2:** typecheck, lint, test, test:e2e, build; tried in a browser.
 
 ## Acceptance
 
-- [ ] I can add, edit and delete a deal, and the open total adds up.
-- [ ] Changing `CURRENCY` to "ZAR" or "EUR" changes how every amount shows.
+- [x] I can add, edit and delete a deal, and the open total adds up.
+- [x] Changing `CURRENCY` to "ZAR" or "EUR" changes how every amount shows.
 
 ## Risks / open questions
 
@@ -63,4 +63,6 @@ combobox moves to `src/components/record-picker.tsx` and the company picker beco
   one locale for server and browser so both render the same.
 - Typed values may include grouping commas, spaces and a leading currency symbol; more than two decimals, negatives
   and anything over 9,999,999,999.99 (the numeric(12,2) limit) are refused with a sentence.
+- The stage list lives in `src/lib/deal-stages.ts` (no imports), so the browser-side form can list the stages
+  without bundling the database code; `schema.ts` builds the enum from it.
 - Picking a contact does not fill in their company; both are chosen separately, as the issue lists them.

@@ -3,21 +3,15 @@
 import { count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
-import { company, contact, deal, dealStage } from "@/lib/db/schema";
+import { company, contact, deal } from "@/lib/db/schema";
+import { DEAL_STAGES, OPEN_STAGES, type DealStage } from "@/lib/deal-stages";
 import { parseMoney } from "@/lib/money";
 
 export type Deal = typeof deal.$inferSelect;
-export type DealStage = Deal["stage"];
 // A deal as the pages show it: with its contact's and company's names, null when it has none.
 export type DealWithNames = Deal & { contactName: string | null; companyName: string | null };
 
-// Fixed, in this order (spec B9). A new deal starts at the first.
-export const DEAL_STAGES: readonly DealStage[] = dealStage.enumValues;
-export const OPEN_STAGES: readonly DealStage[] = ["New", "Contacted", "Proposal"];
-
-export function isOpen(stage: DealStage): boolean {
-  return OPEN_STAGES.includes(stage);
-}
+export { DEAL_STAGES, isOpen, OPEN_STAGES, type DealStage } from "@/lib/deal-stages";
 
 // What the form sends: every field as typed. contactId and companyId are "" for none; expectedClose is "" or
 // YYYY-MM-DD, as a date field sends it.

@@ -8,7 +8,7 @@ describe("menuFor", () => {
 
   it("hides owner-only items from everyone else", () => {
     const labels = menuFor("member").map((i) => i.label);
-    expect(labels).toEqual(["Home", "Contacts", "Companies", "Deals"]);
+    expect(labels).toEqual(["Home", "Contacts", "Companies", "Deals", "Pipeline"]);
     expect(labels).not.toContain("Settings");
     expect(menuFor(undefined).map((i) => i.label)).toEqual(labels);
   });

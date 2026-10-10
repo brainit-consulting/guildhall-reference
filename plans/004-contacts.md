@@ -1,6 +1,6 @@
 # 004 — Contacts
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-10
 
@@ -24,27 +24,27 @@ and edit. Delete opens a dialog asking "Delete <name>? This can't be undone." be
 
 ### Task 1: Data
 
-- [ ] **Step 1:** `contact` in `src/lib/db/schema.ts`; `npm run db:generate`.
-- [ ] **Step 2:** `src/lib/contacts.ts`: `checkContact`, `listContacts`, `getContact`, `createContact`,
+- [x] **Step 1:** `contact` in `src/lib/db/schema.ts`; `npm run db:generate`.
+- [x] **Step 2:** `src/lib/contacts.ts`: `checkContact`, `listContacts`, `getContact`, `createContact`,
   `updateContact`, `deleteContact`.
-- [ ] **Step 3:** `src/lib/contacts.test.ts` and `src/lib/contacts.integration.test.ts`.
+- [x] **Step 3:** `src/lib/contacts.test.ts` and `src/lib/contacts.integration.test.ts`.
 
 ### Task 2: Pages
 
-- [ ] **Step 1:** Contacts in `MENU`.
-- [ ] **Step 2:** `/contacts` table, newest first, with the empty state.
-- [ ] **Step 3:** `/contacts/new` and `/contacts/[id]/edit` sharing `contact-form.tsx`; server actions check the
+- [x] **Step 1:** Contacts in `MENU`.
+- [x] **Step 2:** `/contacts` table, newest first, with the empty state.
+- [x] **Step 3:** `/contacts/new` and `/contacts/[id]/edit` sharing `contact-form.tsx`; server actions check the
   session themselves.
-- [ ] **Step 4:** `/contacts/[id]`: every field, Edit, Delete with the confirmation dialog.
+- [x] **Step 4:** `/contacts/[id]`: every field, Edit, Delete with the confirmation dialog.
 
 ### Task 3: Tests
 
-- [ ] **Step 1:** `e2e/contacts.spec.ts`: add, edit, delete; a bad email is explained; signed out goes to sign-in.
+- [x] **Step 1:** `e2e/contacts.spec.ts`: add, edit, delete; a bad email is explained; signed out goes to sign-in.
 
 ## Acceptance
 
-- [ ] I can add, view, edit and delete a contact.
-- [ ] typecheck, lint, test, test:e2e, build pass; tried in a browser.
+- [x] I can add, view, edit and delete a contact.
+- [x] typecheck, lint, test, test:e2e, build pass; tried in a browser.
 
 ## Risks / open questions
 

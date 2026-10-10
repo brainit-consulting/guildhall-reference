@@ -1,5 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { CURRENCY, formatMoney, parseMoney } from "./money";
+import { addMoney, CURRENCY, formatMoney, parseMoney } from "./money";
+
+describe("addMoney", () => {
+  it("adds stored amounts exactly, in cents", () => {
+    expect(addMoney(["0.10", "0.20"])).toBe("0.30");
+    expect(addMoney(["9999999999.99", "9999999999.99"])).toBe("19999999999.98");
+    expect(addMoney(["1250.5", "0", "3"])).toBe("1253.50");
+  });
+
+  it("counts a missing value as nothing, and nothing as zero", () => {
+    expect(addMoney(["12.00", null, ""])).toBe("12.00");
+    expect(addMoney([])).toBe("0.00");
+  });
+
+  it("refuses anything that isn't a stored amount", () => {
+    expect(() => addMoney(["-1.00"])).toThrow();
+    expect(() => addMoney(["1.234"])).toThrow();
+  });
+});
 
 // Intl puts a no-break space between "R" and the figure.
 const nbsp = (s: string) => s.replace(/ /g, " ");

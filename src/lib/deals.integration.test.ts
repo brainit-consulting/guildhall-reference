@@ -4,7 +4,7 @@ import type { Db } from "@/lib/db/client";
 import { deal } from "@/lib/db/schema";
 import { createCompany, deleteCompany, EMPTY_COMPANY } from "./companies";
 import { createContact, deleteContact, EMPTY_CONTACT, listContactChoices } from "./contacts";
-import { createDeal, deleteDeal, EMPTY_DEAL, getDeal, listDeals, openDealsTotal, updateDeal } from "./deals";
+import { createDeal, deleteDeal, EMPTY_DEAL, getDeal, listDeals, moveDealStage, openDealsTotal, updateDeal } from "./deals";
 
 let t: { db: Db; close(): Promise<void> };
 beforeEach(async () => { t = await createTestDb(); });
@@ -73,6 +73,38 @@ describe("updating a deal", () => {
   it("returns null for a deal that isn't there", async () => {
     expect(await updateDeal(t.db, UNKNOWN, { ...EMPTY_DEAL, title: "Gutters" })).toBeNull();
     expect(await updateDeal(t.db, "not-an-id", { ...EMPTY_DEAL, title: "Gutters" })).toBeNull();
+  });
+});
+
+describe("moving a deal to another stage", () => {
+  it("changes only its stage, says where it came from, and moves it between the open figures", async () => {
+    const { companyId, contactId } = await people();
+    const { id } = await createDeal(t.db, { ...EMPTY_DEAL, title: "Gutters", value: "800", contactId, companyId });
+    const before = (await getDeal(t.db, id!))!;
+    expect(await openDealsTotal(t.db)).toEqual({ count: 1, total: "800.00" });
+
+    expect(await moveDealStage(t.db, id!, "Proposal")).toEqual({ from: "New", to: "Proposal" });
+    expect(await moveDealStage(t.db, id!, "Won")).toEqual({ from: "Proposal", to: "Won" });
+    const after = (await getDeal(t.db, id!))!;
+    expect(after).toMatchObject({ title: "Gutters", value: "800.00", stage: "Won", contactId, companyId });
+    expect(after.updatedAt.getTime()).toBeGreaterThanOrEqual(before.updatedAt.getTime());
+    expect(await openDealsTotal(t.db)).toEqual({ count: 0, total: "0" });
+  });
+
+  it("to the stage it is in changes nothing", async () => {
+    const { id } = await createDeal(t.db, { ...EMPTY_DEAL, title: "Gutters", stage: "Contacted" });
+    const before = (await getDeal(t.db, id!))!;
+    expect(await moveDealStage(t.db, id!, "Contacted")).toEqual({ from: "Contacted", to: "Contacted" });
+    expect((await getDeal(t.db, id!))!.updatedAt).toEqual(before.updatedAt);
+  });
+
+  it("refuses a stage that doesn't exist and a deal that isn't there", async () => {
+    const { id } = await createDeal(t.db, { ...EMPTY_DEAL, title: "Gutters" });
+    expect(await moveDealStage(t.db, id!, "Maybe")).toBeNull();
+    expect(await moveDealStage(t.db, id!, "won")).toBeNull();
+    expect(await moveDealStage(t.db, UNKNOWN, "Won")).toBeNull();
+    expect(await moveDealStage(t.db, "not-an-id", "Won")).toBeNull();
+    expect((await getDeal(t.db, id!))!.stage).toBe("New");
   });
 });
 

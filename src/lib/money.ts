@@ -10,6 +10,19 @@ export function formatMoney(value: string, currency: string = CURRENCY): string 
   );
 }
 
+// Adds stored amounts ("1250.50") exactly, in whole cents, for totals the browser works out itself (the pipeline's
+// columns). Blanks (no value) add nothing.
+export function addMoney(values: readonly (string | null)[]): string {
+  let cents = 0n;
+  for (const v of values) {
+    if (!v) continue;
+    const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(v);
+    if (!match) throw new Error(`Not a stored amount: ${v}`);
+    cents += BigInt(match[1]) * 100n + BigInt((match[2] ?? "").padEnd(2, "0"));
+  }
+  return `${cents / 100n}.${String(cents % 100n).padStart(2, "0")}`;
+}
+
 // The most numeric(12,2) holds: ten digits before the point.
 const MONEY = /^(\d{1,10})(?:\.(\d{1,2}))?$/;
 

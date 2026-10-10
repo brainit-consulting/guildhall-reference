@@ -130,6 +130,21 @@ export async function updateDeal(db: Db, id: string, input: DealInput): Promise<
   return row ? { id: row.id, errors: null } : null;
 }
 
+// Moves a deal to another stage (the pipeline board; later the MCP move_deal_stage tool). Returns the stage it left
+// and the one it reached, so a caller can log "Moved from X to Y"; null for no such deal or no such stage. Moving to
+// the stage it is already in changes nothing.
+export async function moveDealStage(db: Db, id: string, stage: string): Promise<{ from: DealStage; to: DealStage } | null> {
+  const to = DEAL_STAGES.find((s) => s === stage);
+  if (!to || !isId(id)) return null;
+  const [found] = await db.select({ stage: deal.stage }).from(deal).where(eq(deal.id, id)).limit(1);
+  if (!found) return null;
+  if (found.stage !== to) {
+    const [moved] = await db.update(deal).set({ stage: to, updatedAt: new Date() }).where(eq(deal.id, id)).returning({ id: deal.id });
+    if (!moved) return null; // deleted in between
+  }
+  return { from: found.stage, to };
+}
+
 export async function deleteDeal(db: Db, id: string): Promise<boolean> {
   if (!isId(id)) return false;
   const gone = await db.delete(deal).where(eq(deal.id, id)).returning({ id: deal.id });

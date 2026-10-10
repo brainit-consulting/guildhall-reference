@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
+import { ACTIVITY_KINDS } from "../activity-kinds";
 import { DEAL_STAGES } from "../deal-stages";
-import { pgEnum, pgTable, text, timestamp, boolean, date, index, numeric, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { pgEnum, pgTable, text, timestamp, boolean, check, date, index, numeric, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 // ──────────────────────────────────────────────────────────────────
 // Better-Auth core tables (names + column shapes match Better-Auth's
@@ -123,4 +124,25 @@ export const deal = pgTable("deal", {
   index("deal_by_stage").on(t.stage),
   index("deal_contact_id").on(t.contactId),
   index("deal_company_id").on(t.companyId),
+]);
+
+// B11: what kind of thing happened (src/lib/activity-kinds.ts).
+export const activityKind = pgEnum("activity_kind", ACTIVITY_KINDS);
+
+// B11: a note, call, meeting or stage change, on exactly one contact, company or deal; deleted with it.
+export const activity = pgTable("activity", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  kind: activityKind("kind").notNull(),
+  body: text("body").notNull(),
+  // who logged it; kept, without a name, if that person is ever removed
+  userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+  contactId: uuid("contact_id").references(() => contact.id, { onDelete: "cascade" }),
+  companyId: uuid("company_id").references(() => company.id, { onDelete: "cascade" }),
+  dealId: uuid("deal_id").references(() => deal.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [
+  check("activity_on_one_record", sql`num_nonnulls(${t.contactId}, ${t.companyId}, ${t.dealId}) = 1`),
+  index("activity_contact_id").on(t.contactId, t.createdAt),
+  index("activity_company_id").on(t.companyId, t.createdAt),
+  index("activity_deal_id").on(t.dealId, t.createdAt),
 ]);

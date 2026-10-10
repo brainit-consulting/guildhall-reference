@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+/* Guildhall's tokens (see DESIGN.md). Tailwind classes: bg-paper, bg-panel, text-ink, text-muted, border-rule,
+   text-accent / bg-accent, text-danger, font-display, font-sans. */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-panel: var(--panel);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-rule: var(--rule);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+
+  --font-display: var(--font-young-serif), Georgia, serif;
+  --font-sans: var(--font-plex), sans-serif;
+  --radius-sm: 2px;
+}
+
+:root,
+.light {
+  --paper: #F5F0E6;
+  --panel: #FBF8F2;
+  --ink: #22201C;
+  --muted: #6B645A;
+  --rule: #D9CFBD;
+  --accent: #1E5E57;
+  --danger: #9B2C1F;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --paper: #1B1916;
+    --panel: #24211D;
+    --ink: #EDE6D8;
+    --muted: #A79E8F;
+    --rule: #3A352E;
+    --accent: #5FA89E;
+    --danger: #E07A6A;
+    color-scheme: dark;
+  }
+}
+
+.dark {
+  --paper: #1B1916;
+  --panel: #24211D;
+  --ink: #EDE6D8;
+  --muted: #A79E8F;
+  --rule: #3A352E;
+  --accent: #5FA89E;
+  --danger: #E07A6A;
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+select option {
+  background-color: var(--panel);
+  color: var(--ink);
+}

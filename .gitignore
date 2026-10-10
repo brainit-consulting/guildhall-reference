@@ -1,0 +1,43 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# testing
+coverage/
+
+# production
+build/
+
+# misc
+.DS_Store
+*.pem
+.idea/
+.vscode/
+*.tsbuildinfo
+
+# env files
+.env
+.env*.local
+.env.test
+
+# vercel
+.vercel/
+
+# drizzle
+drizzle/meta/_journal.json.bak
+
+# claude code parallel-session worktrees (claude agents view)
+.claude/worktrees/
+
+# playwright mcp screenshots / snapshots
+.playwright-mcp/
+
+# the built-in database (each copy of the repo has its own)
+.data/
+test-results/

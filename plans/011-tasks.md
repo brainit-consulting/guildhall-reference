@@ -1,6 +1,6 @@
 # 011 — Tasks on contacts, companies and deals
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-10
 
@@ -38,14 +38,14 @@ before a day; sorted by due date then title; each with what it belongs to and it
 ### Task 3: Tests and checks
 
 - [x] **Step 1:** `e2e/tasks.spec.ts`.
-- [ ] **Step 2:** typecheck, lint, test, test:e2e, build; tried in a browser at 390px and 1280px, light and dark.
+- [x] **Step 2:** typecheck, lint, test, test:e2e, build; tried in a browser at 390px and 1280px, light and dark.
 
 ## Acceptance
 
-- [ ] A task added on a deal shows under its Tasks after a reload; ticking it removes it for good.
-- [ ] The same on a contact and a company.
-- [ ] A blank title or no due date is explained by the field, and what was typed is kept.
-- [ ] Deleting the record deletes its tasks.
+- [x] A task added on a deal shows under its Tasks after a reload; ticking it removes it for good.
+- [x] The same on a contact and a company.
+- [x] A blank title or no due date is explained by the field, and what was typed is kept.
+- [x] Deleting the record deletes its tasks.
 
 ## Risks / open questions
 

@@ -127,6 +127,23 @@ test.describe("as the owner", () => {
     await expect(card(page, "Proposal", title)).toBeVisible();
   });
 
+  test("a move is written on the deal's timeline", async ({ page }) => {
+    const title = `Lime-wash the barn ${Date.now()}`;
+    await addDeal(page, title, "30");
+    await expect(page.getByText("Nothing logged yet", { exact: true })).toBeVisible(); // last activity, before
+    await page.goto("/pipeline");
+    await moveWithMenu(page, "New", title, "Contacted");
+    await expect(card(page, "Contacted", title)).toBeVisible();
+
+    await card(page, "Contacted", title).getByRole("link", { name: title }).click();
+    await expect(page.getByRole("heading", { name: title, level: 1 })).toBeVisible(COLD);
+    const entry = page.getByRole("list", { name: "Timeline" }).getByRole("listitem");
+    await expect(entry).toHaveCount(1);
+    await expect(entry).toContainText("Stage change");
+    await expect(entry).toContainText("Moved from New to Contacted");
+    await expect(page.getByText("today", { exact: true })).toBeVisible(); // the move is activity
+  });
+
   test("dragging a card to another column moves the deal", async ({ page }) => {
     const title = `Sweep the hall chimney ${Date.now()}`;
     await addDeal(page, title, "75.25");

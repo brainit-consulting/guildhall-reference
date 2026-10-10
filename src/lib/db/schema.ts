@@ -117,6 +117,8 @@ export const deal = pgTable("deal", {
   contactId: uuid("contact_id").references(() => contact.id, { onDelete: "set null" }),
   companyId: uuid("company_id").references(() => company.id, { onDelete: "set null" }),
   expectedClose: date("expected_close", { mode: "string" }),
+  // B11: when an activity was last logged on the deal, its contact or its company; null until one is
+  lastActivityAt: timestamp("last_activity_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => [

@@ -53,4 +53,4 @@ A shared `Activities` section (form + timeline) goes on the three pages.
   be undone). An activity is never moved to another record.
 - The timeline shows the day only, as the issue's example does. The server has no idea of the reader's time zone,
   so the day is worked out in the browser; the server's first render uses UTC.
-- Stage-change activities and last activity are #18: the kind exists here, nothing writes it yet.
+- Stage-change activities and last activity are #18 (plan 010).

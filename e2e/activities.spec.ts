@@ -75,6 +75,55 @@ test.describe("as the owner", () => {
     await expect(page).toHaveURL(/\/deals$/, COLD);
   });
 
+  test("a call on a deal's contact is the deal's last activity, on its page and in the table", async ({ page }) => {
+    test.slow(); // several pages compile on first visit
+    const stamp = Date.now();
+    const person = `Jack Straw ${stamp}`;
+    const title = `Thatch the tithe barn ${stamp}`;
+    await page.goto("/contacts/new");
+    await page.getByLabel("Name").fill(person);
+    await page.getByRole("button", { name: "Add contact" }).click();
+    await expect(page.getByRole("heading", { name: person, level: 1 })).toBeVisible(COLD);
+    const contactUrl = page.url();
+
+    await page.goto("/deals/new");
+    await page.getByLabel("Title").fill(title);
+    const box = page.getByRole("combobox", { name: "Contact" });
+    await expect(async () => {
+      await box.fill("");
+      await box.fill(`straw ${stamp}`);
+      await expect(page.getByRole("option", { name: new RegExp(person) })).toBeVisible({ timeout: 1_000 });
+    }).toPass(COLD);
+    await page.getByRole("option", { name: new RegExp(person) }).click();
+    await page.getByRole("button", { name: "Add deal" }).click();
+    await expect(page.getByRole("heading", { name: title, level: 1 })).toBeVisible(COLD);
+    const dealUrl = page.url();
+    await expect(page.getByText("Nothing logged yet", { exact: true })).toBeVisible();
+
+    await page.goto(contactUrl);
+    await log(page, "Call", "Rang about the thatch.");
+
+    await page.goto(dealUrl);
+    await expect(page.getByRole("heading", { name: title, level: 1 })).toBeVisible(COLD);
+    const last = page.locator("dl > div").filter({ hasText: "Last activity" });
+    await expect(last).toContainText("today");
+    await expect(last.locator("time")).toHaveAttribute("title", await today(page));
+    await expect(page.getByText("Nothing logged yet. Log a call, meeting or note above.")).toBeVisible(); // the call is on the contact
+
+    await page.goto("/deals");
+    const row = page.getByRole("row").filter({ has: page.getByRole("link", { name: title, exact: true }) });
+    await expect(row.getByRole("cell").last()).toHaveText("today", COLD);
+
+    // clean up the deal, so other tests' open totals stay as they were
+    await page.goto(dealUrl);
+    await expect(async () => {
+      await page.getByRole("button", { name: "Delete" }).click();
+      await expect(page.getByRole("dialog")).toBeVisible({ timeout: 1_000 });
+    }).toPass(COLD);
+    await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
+    await expect(page).toHaveURL(/\/deals$/, COLD);
+  });
+
   test("a company has Log activity too, and empty text is explained", async ({ page }) => {
     const company = `Lynn Tilers ${Date.now()}`;
     await page.goto("/companies/new");

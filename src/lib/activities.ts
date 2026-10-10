@@ -1,6 +1,6 @@
 // Activities (B11): the notes, calls, meetings and stage changes on a contact, company or deal. Plain functions on
 // `db`, so the pages and later stage changes, last activity and the MCP log_activity tool share one set of rules.
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
 import { activity, company, contact, deal, user } from "@/lib/db/schema";
@@ -60,7 +60,20 @@ export async function addActivity(
   const on = { contactId: target.type === "contact" ? target.id : null, companyId: target.type === "company" ? target.id : null,
     dealId: target.type === "deal" ? target.id : null };
   const [row] = await db.insert(activity).values({ ...values, userId, ...on }).returning({ id: activity.id });
+  await touchDeals(db, target, row.id);
   return { id: row.id, errors: null };
+}
+
+const dealColumn = { contact: deal.contactId, company: deal.companyId, deal: deal.id } as const;
+
+// Last activity (B11): an activity on a deal, its contact or its company is activity on the deal. The time is read
+// from the saved row, so it is the database's clock, as created_at is. Only ever moves forward (greatest skips a
+// null), so an activity saved late can't make a deal look colder than it is.
+async function touchDeals(db: Db, target: ActivityTarget, activityId: string) {
+  const at = sql`(select ${activity.createdAt} from ${activity} where ${activity.id} = ${activityId})`;
+  await db.update(deal)
+    .set({ lastActivityAt: sql`greatest(${deal.lastActivityAt}, ${at})` })
+    .where(eq(dealColumn[target.type], target.id));
 }
 
 // "Log activity" on a contact, company or deal page.

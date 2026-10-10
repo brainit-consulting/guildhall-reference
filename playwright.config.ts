@@ -9,16 +9,22 @@ const baseURL = `http://localhost:${port}`;
 
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: true,
+  // One worker and generous waits: the dev server builds each page on its first visit, which can take far longer than
+  // Playwright's 5-second default, and parallel workers make several pages build at once. Found in the course's dry run.
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
+  timeout: 120_000,
+  expect: { timeout: 20_000 },
 
   use: {
     baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    actionTimeout: 20_000,
+    navigationTimeout: 60_000,
   },
 
   // The first account is the owner (B6), so `setup` signs the owner up before anything else; other tests ask the

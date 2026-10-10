@@ -148,3 +148,23 @@ export const activity = pgTable("activity", {
   index("activity_company_id").on(t.companyId, t.createdAt),
   index("activity_deal_id").on(t.dealId, t.createdAt),
 ]);
+
+// B12: something promised, due on a day, on exactly one contact, company or deal; deleted with it.
+export const task = pgTable("task", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  dueOn: date("due_on", { mode: "string" }).notNull(),
+  // null while open
+  doneAt: timestamp("done_at"),
+  contactId: uuid("contact_id").references(() => contact.id, { onDelete: "cascade" }),
+  companyId: uuid("company_id").references(() => company.id, { onDelete: "cascade" }),
+  dealId: uuid("deal_id").references(() => deal.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [
+  check("task_on_one_record", sql`num_nonnulls(${t.contactId}, ${t.companyId}, ${t.dealId}) = 1`),
+  index("task_contact_id").on(t.contactId, t.dueOn),
+  index("task_company_id").on(t.companyId, t.dueOn),
+  index("task_deal_id").on(t.dealId, t.dueOn),
+  // the Tasks page and Home: open tasks due on or before a day
+  index("task_open_due_on").on(t.dueOn).where(sql`${t.doneAt} is null`),
+]);

@@ -2,6 +2,13 @@
 // September ("Sep" or "Sept"), and a calendar day has no time zone to convert.
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+// A real calendar day as YYYY-MM-DD: "2026-02-30" is refused rather than rolled into March.
+export function isDay(s: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+}
+
 // day is YYYY-MM-DD, as Postgres returns a date column
 export function formatDay(day: string): string {
   const [year, month, date] = day.split("-").map(Number);

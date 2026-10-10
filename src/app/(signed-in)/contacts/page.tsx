@@ -40,7 +40,7 @@ export default async function ContactsPage() {
                   <td className="px-3 py-2">
                     <Link href={`/contacts/${c.id}`} className="text-accent underline-offset-4 hover:underline">{c.name}</Link>
                   </td>
-                  <td className="break-all px-3 py-2 text-ink">{c.email}</td>
+                  <td className="break-words px-3 py-2 text-ink">{c.email}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-ink">{c.phone}</td>
                   <td className="px-3 py-2 text-ink">{c.jobTitle}</td>
                 </tr>

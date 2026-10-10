@@ -20,6 +20,19 @@ export function localClient(dir: string): PGlite {
   return c;
 }
 
-export const db: Db = env.databaseUrl
-  ? (drizzleNeon(neon(env.databaseUrl), { schema }) as unknown as Db)
-  : (drizzlePglite(localClient(env.dataDir), { schema }) as unknown as Db);
+function connect(): Db {
+  return env.databaseUrl
+    ? (drizzleNeon(neon(env.databaseUrl), { schema }) as unknown as Db)
+    : (drizzlePglite(localClient(env.dataDir), { schema }) as unknown as Db);
+}
+
+// Opened on first use, not on import: Next imports page modules in build and helper worker processes that never
+// query, and a second process opening the same PGlite folder leaves it unreadable.
+let real: Db | undefined;
+export const db: Db = new Proxy({} as Db, {
+  get(_target, prop) {
+    const d = (real ??= connect());
+    const value = Reflect.get(d, prop, d);
+    return typeof value === "function" ? value.bind(d) : value;
+  },
+});

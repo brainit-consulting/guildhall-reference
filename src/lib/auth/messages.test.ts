@@ -46,6 +46,10 @@ describe("authErrorMessage", () => {
     expect(authErrorMessage("VALIDATION_ERROR")).toMatch(/Check your name, email and password/);
   });
 
+  it("tells a refused sign-up who to ask", () => {
+    expect(authErrorMessage("SIGN_UP_CLOSED")).toBe("Ask the owner to add your email in Settings.");
+  });
+
   it("falls back for unknown or missing codes", () => {
     expect(authErrorMessage("SOMETHING_NEW")).toBe(FALLBACK_MESSAGE);
     expect(authErrorMessage(undefined)).toBe(FALLBACK_MESSAGE);

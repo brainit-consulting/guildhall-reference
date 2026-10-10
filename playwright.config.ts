@@ -21,7 +21,12 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
 
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // The first account is the owner (B6), so `setup` signs the owner up before anything else; other tests ask the
+  // owner to allow their emails (e2e/owner.ts).
+  projects: [
+    { name: "setup", testMatch: /owner\.setup\.ts/, use: { ...devices["Desktop Chrome"] } },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, dependencies: ["setup"] },
+  ],
 
   webServer: {
     command: "npm run e2e:server",

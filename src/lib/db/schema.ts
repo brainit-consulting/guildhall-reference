@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { pgTable, text, timestamp, boolean, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 // ──────────────────────────────────────────────────────────────────
 // Better-Auth core tables (names + column shapes match Better-Auth's
@@ -15,7 +16,10 @@ export const user = pgTable("user", {
   role: text("role").notNull().default("member"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (t) => [
+  // at most one owner, enforced by the database so two sign-ups at once can't both become it
+  uniqueIndex("user_one_owner").on(t.role).where(sql`${t.role} = 'owner'`),
+]);
 
 export const session = pgTable("session", {
   id: text("id").primaryKey(),
@@ -55,4 +59,15 @@ export const verification = pgTable("verification", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ──────────────────────────────────────────────────────────────────
+// Guildhall
+// ──────────────────────────────────────────────────────────────────
+
+// B6: who may sign up after the owner. Emails are stored trimmed and lower-case.
+export const allowedEmail = pgTable("allowed_email", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull().unique(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });

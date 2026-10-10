@@ -8,10 +8,16 @@ const MESSAGES: Record<string, string> = {
   INVALID_EMAIL: "That doesn't look like an email address. Check it and try again.",
   // sign-up's answer to any field it rejects (a malformed email among them); it doesn't say which
   VALIDATION_ERROR: "Something you typed wasn't accepted. Check your name, email and password and try again.",
+  // ours, thrown by the sign-up gate in src/lib/access.ts once the Guildhall has an owner
+  SIGN_UP_CLOSED: "Ask the owner to add your email in Settings.",
 };
 
 // Loose on purpose: catches the obvious slips ("margery-at-lynn") and leaves the rest to the server.
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function isEmail(email: string): boolean {
+  return EMAIL_SHAPE.test(email.trim());
+}
 
 export const FALLBACK_MESSAGE = "Something went wrong on our side. Try again in a moment.";
 
@@ -21,7 +27,7 @@ export const MIN_PASSWORD = 8;
 export function checkAuthForm(form: { name?: string; email: string; password: string }, mode: "signup" | "signin"): string | null {
   if (mode === "signup" && !form.name?.trim()) return "Enter your name.";
   if (!form.email.trim()) return "Enter your email address.";
-  if (!EMAIL_SHAPE.test(form.email.trim())) return MESSAGES.INVALID_EMAIL;
+  if (!isEmail(form.email)) return MESSAGES.INVALID_EMAIL;
   if (!form.password) return "Enter your password.";
   if (mode === "signup" && form.password.length < MIN_PASSWORD) return MESSAGES.PASSWORD_TOO_SHORT;
   return null;

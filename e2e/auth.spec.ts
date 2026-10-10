@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { allowSignUp } from "./owner";
 
-test("sign up, sign out and sign back in", async ({ page }) => {
+test("sign up, sign out and sign back in", async ({ page, browser }) => {
   const email = `ada-${Date.now()}@example.com`;
+  await allowSignUp(browser, email);
 
   await page.goto("/");
   await page.getByRole("link", { name: "Create account" }).click();

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { deleteCompanyAction } from "../actions";
 
 // A <dialog> rather than window.confirm(), so the question is in our words and our look.
-export function DeleteCompany({ id, name }: { id: string; name: string }) {
+export function DeleteCompany({ id, name, contacts }: { id: string; name: string; contacts: number }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);
 
@@ -26,6 +26,12 @@ export function DeleteCompany({ id, name }: { id: string; name: string }) {
         className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-sm border border-rule bg-panel p-6 text-ink backdrop:bg-ink/40"
       >
         <p id="delete-question" className="font-display text-xl">Delete {name}? This can&apos;t be undone.</p>
+        {/* the contacts are kept (the foreign key sets their company to null), and the question says so */}
+        {contacts > 0 && (
+          <p className="mt-3 text-sm text-ink">
+            {contacts === 1 ? "Its 1 contact stays" : `Its ${contacts} contacts stay`} in Guildhall, with no company.
+          </p>
+        )}
         <form action={deleteCompanyAction} className="mt-6 flex items-center gap-3">
           <input type="hidden" name="id" value={id} />
           <ConfirmButton />

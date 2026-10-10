@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSession } from "@/lib/auth/session";
-import { listContacts, type Contact } from "@/lib/contacts";
+import { listContacts, type ContactWithCompany } from "@/lib/contacts";
 import { db } from "@/lib/db/client";
 
 export const metadata: Metadata = { title: "Contacts · Guildhall" };
@@ -30,6 +30,11 @@ export default async function ContactsPage() {
             {contacts.map((c) => (
               <li key={c.id} className="border-b border-rule py-3">
                 <Link href={`/contacts/${c.id}`} className="text-accent underline-offset-4 wrap-anywhere hover:underline">{c.name}</Link>
+                {c.companyId && (
+                  <p className="mt-1 text-sm text-ink wrap-anywhere">
+                    <span className="text-muted">Company:</span> <CompanyLink c={c} />
+                  </p>
+                )}
                 {details(c).map(([label, value]) => (
                   <p key={label} className="mt-1 text-sm text-ink wrap-anywhere">
                     <span className="text-muted">{label}:</span> {value}
@@ -44,6 +49,7 @@ export default async function ContactsPage() {
               <thead>
                 <tr className="border-b border-rule bg-panel text-sm text-muted">
                   <th scope="col" className="px-3 py-2 font-medium">Name</th>
+                  <th scope="col" className="px-3 py-2 font-medium">Company</th>
                   <th scope="col" className="px-3 py-2 font-medium">Email</th>
                   <th scope="col" className="px-3 py-2 font-medium">Phone</th>
                   <th scope="col" className="px-3 py-2 font-medium">Job title</th>
@@ -55,6 +61,7 @@ export default async function ContactsPage() {
                     <td className="px-3 py-2">
                       <Link href={`/contacts/${c.id}`} className="text-accent underline-offset-4 hover:underline">{c.name}</Link>
                     </td>
+                    <td className="px-3 py-2">{c.companyId && <CompanyLink c={c} />}</td>
                     <td className="px-3 py-2 text-ink wrap-anywhere">{c.email}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-ink">{c.phone}</td>
                     <td className="px-3 py-2 text-ink">{c.jobTitle}</td>
@@ -69,8 +76,12 @@ export default async function ContactsPage() {
   );
 }
 
+function CompanyLink({ c }: { c: ContactWithCompany }) {
+  return <Link href={`/companies/${c.companyId}`} className="text-accent underline-offset-4 hover:underline">{c.companyName}</Link>;
+}
+
 // The table's other columns, for the stacked rows; blank ones are left out to keep each block short.
-function details(c: Contact): [string, string][] {
+function details(c: ContactWithCompany): [string, string][] {
   const lines: [string, string | null][] = [["Email", c.email], ["Phone", c.phone], ["Job title", c.jobTitle]];
   return lines.filter((l): l is [string, string] => !!l[1]);
 }

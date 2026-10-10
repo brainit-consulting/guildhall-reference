@@ -85,3 +85,16 @@ export const contact = pgTable("contact", {
 }, (t) => [
   index("contact_created_at").on(t.createdAt),
 ]);
+
+// B8: the businesses those people work for. Optional fields are null when left blank, never "".
+export const company = pgTable("company", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  website: text("website"),
+  phone: text("phone"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("company_created_at").on(t.createdAt),
+]);

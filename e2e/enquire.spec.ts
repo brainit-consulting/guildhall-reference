@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { BUSINESS_NAME } from "../src/lib/brand";
 import { OWNER_STATE } from "./owner";
 
 // The dev server compiles each page on its first visit; every wait for a newly opened page uses this.
@@ -40,8 +41,8 @@ test.describe("signed out", () => {
 
   test("the page is the business's, with nothing from the records", async ({ page }) => {
     await openForm(page);
-    await expect(page).toHaveTitle("Ask for a quote · Guildhall");
-    await expect(page.getByRole("heading", { name: "Guildhall", level: 1 })).toBeVisible();
+    await expect(page).toHaveTitle(`Ask for a quote · ${BUSINESS_NAME}`);
+    await expect(page.getByRole("heading", { name: BUSINESS_NAME, level: 1 })).toBeVisible();
     await expect(page.getByText("Ask for a quote. We'll get back to you.")).toBeVisible();
     await expect(page.getByRole("navigation")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Sign in" })).toHaveCount(0);
@@ -164,7 +165,7 @@ test.describe("signed in", () => {
 
   test("the owner sees the same form, and deals added by hand show no source", async ({ page }) => {
     await openForm(page);
-    await expect(page.getByRole("heading", { name: "Guildhall", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: BUSINESS_NAME, level: 1 })).toBeVisible();
     await expect(page.getByRole("navigation")).toHaveCount(0);
 
     const title = `Hand-added ${Date.now()}`;

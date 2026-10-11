@@ -29,7 +29,7 @@ export default async function Home() {
       <h1 className="font-display text-4xl text-ink -ml-px md:-ml-6">Welcome, {user.name}.</h1>
       <Ledger f={{ open, won, month, stages, overdue: due.overdue.length, dueToday: due.today.length, cold: cold.count }} />
       {nothing ? (
-        <p className="mt-4 border-t border-rule pt-4 text-muted">Nothing due today.</p>
+        <p className="mt-12 border-t border-rule pt-4 text-muted">Nothing due today.</p>
       ) : (
         <>
           <Due id="overdue" heading="Overdue" tasks={due.overdue} />

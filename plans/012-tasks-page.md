@@ -1,6 +1,6 @@
 # 012 — The Tasks page
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-10
 
@@ -24,25 +24,25 @@ form takes either a fixed target or the choices; the tick box moves out of `Task
 
 ### Task 1: Data
 
-- [ ] **Step 1:** `listTaskTargetChoices`, `readTarget`, `createTaskOn` in `src/lib/tasks.ts`; unit and integration tests.
+- [x] **Step 1:** `listTaskTargetChoices`, `readTarget`, `createTaskOn` in `src/lib/tasks.ts`; unit and integration tests.
 
 ### Task 2: Page
 
-- [ ] **Step 1:** "Tasks" in `MENU` after Pipeline; `menu.test.ts`.
-- [ ] **Step 2:** `addTaskAction` takes a picked value when it has no target; the form shows the picker then.
-- [ ] **Step 3:** The tick box as its own component; `/tasks` with the table (stacked under 768px), Show done, empty state.
+- [x] **Step 1:** "Tasks" in `MENU` after Pipeline; `menu.test.ts`.
+- [x] **Step 2:** `addTaskAction` takes a picked value when it has no target; the form shows the picker then.
+- [x] **Step 3:** The tick box as its own component; `/tasks` with the table (stacked under 768px), Show done, empty state.
 
 ### Task 3: Tests and checks
 
-- [ ] **Step 1:** `e2e/tasks-page.spec.ts`; the menu's current item on `/tasks`.
-- [ ] **Step 2:** typecheck, lint, test, test:e2e, build; tried at 390px and 1280px, light and dark.
+- [x] **Step 1:** `e2e/tasks-page.spec.ts`; the menu's current item on `/tasks`.
+- [x] **Step 2:** typecheck, lint, test, test:e2e, build; tried at 390px and 1280px, light and dark.
 
 ## Acceptance
 
-- [ ] A task added on a deal shows on `/tasks` and on the deal, and ticks off from either.
-- [ ] A task added from `/tasks` on a picked company shows on `/tasks` and on the company page.
-- [ ] Show done lists ticked tasks; unticking one reopens it; a reload keeps the switch.
-- [ ] Tasks is the current menu item on `/tasks`, desktop and phone.
+- [x] A task added on a deal shows on `/tasks` and on the deal, and ticks off from either.
+- [x] A task added from `/tasks` on a picked company shows on `/tasks` and on the company page.
+- [x] Show done lists ticked tasks; unticking one reopens it; a reload keeps the switch.
+- [x] Tasks is the current menu item on `/tasks`, desktop and phone.
 
 ## Risks / open questions
 

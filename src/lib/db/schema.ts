@@ -121,6 +121,8 @@ export const deal = pgTable("deal", {
   lastActivityAt: timestamp("last_activity_at"),
   // B14: the business's calendar day the deal reached Won; null while it isn't at Won
   wonOn: date("won_on", { mode: "string" }),
+  // B15: where the deal came from ("Web form" for enquiries); null for deals added by hand. No form edits it.
+  source: text("source"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => [
@@ -171,4 +173,18 @@ export const task = pgTable("task", {
   index("task_deal_id").on(t.dealId, t.dueOn),
   // the Tasks page and Home: open tasks due on or before a day
   index("task_open_due_on").on(t.dueOn).where(sql`${t.doneAt} is null`),
+]);
+
+// B15: one row per enquiry saved from the web form, counted towards its email's daily limit. Kept when the owner
+// deletes the deal, so deleting doesn't reopen the day's allowance.
+export const enquiry = pgTable("enquiry", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  // trimmed and lower-case
+  email: text("email").notNull(),
+  // the business's calendar day it arrived
+  receivedOn: date("received_on", { mode: "string" }).notNull(),
+  dealId: uuid("deal_id").references(() => deal.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [
+  index("enquiry_email_received_on").on(t.email, t.receivedOn),
 ]);

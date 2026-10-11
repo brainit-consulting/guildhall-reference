@@ -177,6 +177,20 @@ export async function coldDeals(db: Db, now = new Date()): Promise<DealWithNames
     .orderBy(sql`coalesce(${deal.lastActivityAt}, ${deal.createdAt}) asc`, sql`lower(${deal.title})`, asc(deal.id));
 }
 
+// How many deals are going cold at `now` and what they are worth: Home's "Going cold", the figures /deals?cold=1 shows.
+export async function coldDealsTotal(db: Db, now = new Date()): Promise<DealsTotal> {
+  return dealsTotal(db, coldWhere(now));
+}
+
+// How many deals sit at each stage, every stage present (0 for one with none): Home's row of stages. One grouped
+// query; each count is the rows /deals?stage=<Stage> lists.
+export async function dealsPerStage(db: Db): Promise<Record<DealStage, number>> {
+  const rows = await db.select({ stage: deal.stage, count: count() }).from(deal).groupBy(deal.stage);
+  const counts = Object.fromEntries(DEAL_STAGES.map((s) => [s, 0])) as Record<DealStage, number>;
+  for (const r of rows) counts[r.stage] = r.count;
+  return counts;
+}
+
 // How many deals were won in a month (YYYY-MM) and what they are worth: Home's "Won this month". A deal won and then
 // moved out of Won has no won_on, so it no longer counts.
 export async function wonInMonth(db: Db, month: string): Promise<DealsTotal> {

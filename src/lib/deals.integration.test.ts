@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTestDb } from "@/test/db";
 import type { Db } from "@/lib/db/client";
@@ -5,7 +6,8 @@ import { deal, user } from "@/lib/db/schema";
 import { listActivities } from "./activities";
 import { createCompany, deleteCompany, EMPTY_COMPANY } from "./companies";
 import { createContact, deleteContact, EMPTY_CONTACT, listContactChoices } from "./contacts";
-import { createDeal, deleteDeal, EMPTY_DEAL, getDeal, listDeals, moveDealStage, openDealsTotal, updateDeal } from "./deals";
+import { createDeal, deleteDeal, EMPTY_DEAL, getDeal, listDeals, moveDealStage, openDealsTotal, readDealView, updateDeal } from "./deals";
+import type { SearchParams } from "./list-view";
 
 let t: { db: Db; close(): Promise<void> };
 beforeEach(async () => { t = await createTestDb(); });
@@ -207,5 +209,102 @@ describe("the contact picker's choices", () => {
       ["Agnes Paston", null],
       ["Wat Tyler", "Lynn Tilers"],
     ]);
+  });
+});
+
+describe("searching, sorting and filtering the list", () => {
+  const view = (params: SearchParams) => readDealView(params);
+  const titles = async (params: SearchParams) => (await listDeals(t.db, view(params))).map((d) => d.title);
+
+  // Five deals, one at each stage, with some blanks so every sort has something to put last. Added oldest first.
+  async function ledger() {
+    const acme = (await createCompany(t.db, { ...EMPTY_COMPANY, name: "ACME Roofing" })).id!;
+    const lynn = (await createCompany(t.db, { ...EMPTY_COMPANY, name: "Lynn Tilers" })).id!;
+    const wat = (await createContact(t.db, { ...EMPTY_CONTACT, name: "Wat Tyler", email: "wat@Acme.example" })).id!;
+    const joan = (await createContact(t.db, { ...EMPTY_CONTACT, name: "Joan Acmeson" })).id!;
+    const add = async (title: string, rest: Partial<typeof EMPTY_DEAL>, day: number) => {
+      const { id } = await createDeal(t.db, { ...EMPTY_DEAL, title, ...rest });
+      await t.db.update(deal).set({ createdAt: new Date(Date.UTC(2026, 8, day)) }).where(eq(deal.id, id!));
+      return id!;
+    };
+    await add("Gutters", { value: "1000", stage: "Proposal", companyId: lynn, contactId: wat, expectedClose: "2026-12-01" }, 1);
+    await add("re-roof the hall", { value: "900", stage: "New", companyId: acme, expectedClose: "2026-11-01" }, 2);
+    await add("Chimney", { value: "", stage: "Won", contactId: joan }, 3);
+    const porch = await add("Porch", { value: "50.25", stage: "Lost", companyId: lynn, expectedClose: "2027-01-15" }, 4);
+    await add("Bell tower", { value: "20000", stage: "Contacted" }, 5);
+    await t.db.update(deal).set({ lastActivityAt: new Date("2026-10-01T09:00:00Z") }).where(eq(deal.id, porch));
+    await t.db.update(deal).set({ lastActivityAt: new Date("2026-10-05T09:00:00Z") }).where(eq(deal.title, "Gutters"));
+  }
+
+  it("with no view, or no sort, keeps today's order: newest first", async () => {
+    await ledger();
+    const newest = ["Bell tower", "Porch", "Chimney", "re-roof the hall", "Gutters"];
+    expect((await listDeals(t.db)).map((d) => d.title)).toEqual(newest);
+    expect(await titles({})).toEqual(newest);
+  });
+
+  it("searches the title, company name, contact name and contact email, ignoring capitals", async () => {
+    await ledger();
+    // company "ACME Roofing", contact email "wat@Acme.example", contact name "Joan Acmeson"
+    expect(await titles({ q: "acme", sort: "title" })).toEqual(["Chimney", "Gutters", "re-roof the hall"]);
+    expect(await titles({ q: "ROOF" })).toEqual(["re-roof the hall"]);
+    expect(await titles({ q: "wat ty" })).toEqual(["Gutters"]);
+    expect(await titles({ q: "50%" })).toEqual([]);
+  });
+
+  it("sorts titles and companies ignoring capitals, blanks last both ways", async () => {
+    await ledger();
+    expect(await titles({ sort: "title" })).toEqual(["Bell tower", "Chimney", "Gutters", "Porch", "re-roof the hall"]);
+    expect(await titles({ sort: "title", dir: "desc" })).toEqual(["re-roof the hall", "Porch", "Gutters", "Chimney", "Bell tower"]);
+    // ties on Lynn Tilers break by title; no company goes last
+    expect(await titles({ sort: "company" })).toEqual(["re-roof the hall", "Gutters", "Porch", "Bell tower", "Chimney"]);
+    expect(await titles({ sort: "company", dir: "desc" })).toEqual(["Gutters", "Porch", "re-roof the hall", "Bell tower", "Chimney"]);
+  });
+
+  it("sorts value as money, not as text, blanks last both ways", async () => {
+    await ledger();
+    // as text "1000.00" would come before "900.00"
+    expect(await titles({ sort: "value" })).toEqual(["Porch", "re-roof the hall", "Gutters", "Bell tower", "Chimney"]);
+    expect(await titles({ sort: "value", dir: "desc" })).toEqual(["Bell tower", "Gutters", "re-roof the hall", "Porch", "Chimney"]);
+  });
+
+  it("sorts stage in pipeline order", async () => {
+    await ledger();
+    const stages = async (params: SearchParams) => (await listDeals(t.db, view(params))).map((d) => d.stage);
+    expect(await stages({ sort: "stage" })).toEqual(["New", "Contacted", "Proposal", "Won", "Lost"]);
+    expect(await stages({ sort: "stage", dir: "desc" })).toEqual(["Lost", "Won", "Proposal", "Contacted", "New"]);
+  });
+
+  it("sorts expected close and last activity by date, blanks last both ways", async () => {
+    await ledger();
+    expect(await titles({ sort: "close" })).toEqual(["re-roof the hall", "Gutters", "Porch", "Bell tower", "Chimney"]);
+    expect(await titles({ sort: "close", dir: "desc" })).toEqual(["Porch", "Gutters", "re-roof the hall", "Bell tower", "Chimney"]);
+    expect(await titles({ sort: "activity" })).toEqual(["Porch", "Gutters", "Bell tower", "Chimney", "re-roof the hall"]);
+    expect(await titles({ sort: "activity", dir: "desc" })).toEqual(["Gutters", "Porch", "Bell tower", "Chimney", "re-roof the hall"]);
+  });
+
+  it("filters by one stage, or to open deals only; an unknown stage is ignored", async () => {
+    await ledger();
+    expect(await titles({ stage: "Proposal" })).toEqual(["Gutters"]);
+    expect(await titles({ open: "1", sort: "title" })).toEqual(["Bell tower", "Gutters", "re-roof the hall"]);
+    expect(await titles({ stage: "Nope" })).toHaveLength(5);
+  });
+
+  it("combines search, filters and sort; Won with open only matches nothing", async () => {
+    await ledger();
+    expect(await titles({ q: "acme", open: "1", sort: "value", dir: "desc" })).toEqual(["Gutters", "re-roof the hall"]);
+    expect(await titles({ q: "lynn", stage: "Lost", sort: "title" })).toEqual(["Porch"]);
+    expect(await titles({ stage: "Won", open: "1" })).toEqual([]);
+  });
+
+  it("the open total follows the search and filters, and not the sort", async () => {
+    await ledger();
+    expect(await openDealsTotal(t.db)).toEqual({ count: 3, total: "21900.00" });
+    expect(await openDealsTotal(t.db, view({}))).toEqual({ count: 3, total: "21900.00" });
+    expect(await openDealsTotal(t.db, view({ q: "acme" }))).toEqual({ count: 2, total: "1900.00" });
+    expect(await openDealsTotal(t.db, view({ stage: "Proposal" }))).toEqual({ count: 1, total: "1000.00" });
+    expect(await openDealsTotal(t.db, view({ q: "lynn", open: "1" }))).toEqual({ count: 1, total: "1000.00" });
+    expect(await openDealsTotal(t.db, view({ stage: "Won" }))).toEqual({ count: 0, total: "0" });
+    expect(await openDealsTotal(t.db, view({ sort: "value", dir: "desc" }))).toEqual({ count: 3, total: "21900.00" });
   });
 });

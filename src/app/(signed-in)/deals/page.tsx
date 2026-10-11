@@ -3,17 +3,38 @@ import Link from "next/link";
 import { requireSession } from "@/lib/auth/session";
 import { formatDay } from "@/lib/dates";
 import { db } from "@/lib/db/client";
-import { listDeals, openDealsTotal, type DealWithNames } from "@/lib/deals";
+import { listDeals, openDealsTotal, readDealView, type DealWithNames } from "@/lib/deals";
+import { listHref, type SearchParams } from "@/lib/list-view";
 import { formatMoney } from "@/lib/money";
+import { OpenOnly, StageFilter } from "./deal-filters";
 import { StageName } from "./stage-name";
 import { DaysAgo } from "../_activities/days-ago";
+import { SearchBox } from "../_lists/search-box";
+import { SortBy } from "../_lists/sort-by";
+import { SortHeading } from "../_lists/sort-heading";
 
 export const metadata: Metadata = { title: "Deals · Guildhall" };
 
-export default async function DealsPage() {
+const PATH = "/deals";
+// The phone "Sort by" names each direction in words that suit the column; the headings use only the label.
+const COLUMNS = [
+  { key: "title", label: "Title" },
+  { key: "company", label: "Company" },
+  { key: "value", label: "Value", asc: "lowest first", desc: "highest first", className: "text-right" },
+  { key: "stage", label: "Stage", asc: "New to Lost", desc: "Lost to New" },
+  { key: "close", label: "Expected close", asc: "soonest first", desc: "latest first" },
+  { key: "activity", label: "Last activity", asc: "longest ago first", desc: "most recent first" },
+];
+
+export default async function DealsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   await requireSession();
-  const [deals, open] = await Promise.all([listDeals(db), openDealsTotal(db)]);
+  const params = await searchParams;
+  const view = readDealView(params);
+  // the same view for both, so the open figures count only the open deals the table shows
+  const [deals, open] = await Promise.all([listDeals(db, view), openDealsTotal(db, view)]);
   const now = new Date().toISOString();
+  const list = { path: PATH, params, view };
+  const filtered = view.stage !== null || view.open;
   return (
     <main className="max-w-5xl px-6 py-12 md:px-12">
       <div className="flex flex-wrap items-baseline justify-between gap-4">
@@ -23,7 +44,7 @@ export default async function DealsPage() {
         </Link>
       </div>
 
-      {/* The ledger's running figure: open means New, Contacted or Proposal. */}
+      {/* The ledger's running figure: open means New, Contacted or Proposal, among the deals listed below. */}
       <dl aria-label="Open deals" className="mt-8 flex flex-wrap gap-x-10 gap-y-2 border-y border-rule py-4">
         <div>
           <dt className="text-sm text-muted">Open deals</dt>
@@ -35,7 +56,22 @@ export default async function DealsPage() {
         </div>
       </dl>
 
-      {deals.length === 0 ? (
+      {/* Kept outside the empty states, so the box keeps its focus and what is typed while the list changes. */}
+      <div className="mt-6 flex flex-wrap items-end gap-x-6 gap-y-4">
+        <div className="w-full max-w-sm"><SearchBox path={PATH} params={params} q={view.q} /></div>
+        <StageFilter path={PATH} params={params} stage={view.stage} />
+        <OpenOnly path={PATH} params={params} on={view.open} />
+        <SortBy {...list} columns={COLUMNS} defaultLabel="Newest added first" className="w-full md:hidden" />
+      </div>
+
+      {deals.length === 0 && (view.q || filtered) ? (
+        <p className="mt-6 border-t border-rule pt-6 text-muted wrap-anywhere">
+          {view.q ? <>No deals match &quot;{view.q}&quot;{filtered && " with these filters"}.</> : "No deals match these filters."}{" "}
+          <Link href={listHref(PATH, params, { q: null, stage: null, open: null })} className="text-accent underline-offset-4 hover:underline">
+            {view.q && filtered ? "Clear search and filters" : view.q ? "Clear search" : "Clear filters"}
+          </Link>
+        </p>
+      ) : deals.length === 0 ? (
         <p className="mt-6 text-muted">
           No deals yet. <Link href="/deals/new" className="text-accent underline-offset-4 hover:underline">Add your first.</Link>
         </p>
@@ -67,12 +103,7 @@ export default async function DealsPage() {
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="border-b border-rule bg-panel text-sm text-muted">
-                  <th scope="col" className="px-3 py-2 font-medium">Title</th>
-                  <th scope="col" className="px-3 py-2 font-medium">Company</th>
-                  <th scope="col" className="px-3 py-2 text-right font-medium">Value</th>
-                  <th scope="col" className="px-3 py-2 font-medium">Stage</th>
-                  <th scope="col" className="px-3 py-2 font-medium">Expected close</th>
-                  <th scope="col" className="px-3 py-2 font-medium">Last activity</th>
+                  {COLUMNS.map((c) => <SortHeading key={c.key} {...list} column={c.key} label={c.label} className={c.className} />)}
                 </tr>
               </thead>
               <tbody>

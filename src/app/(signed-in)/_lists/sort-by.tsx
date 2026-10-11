@@ -7,16 +7,17 @@ type Choice = { sort: string | null; dir: SortDir; label: string };
 
 // Under 768px a list has no headings, so this offers each column both ways. A disclosure of links: Tab and Enter
 // open it and pick, it works before the script loads, and the address changes just as a heading's click would.
-// `defaultLabel` names the list's order with no sort chosen, so it can be shown and picked again.
+// `defaultLabel` names the list's order with no sort chosen, so it can be shown and picked again. A column whose values
+// aren't words names its own directions ("Value, lowest first"); otherwise they read "A to Z" and "Z to A".
 export function SortBy({ path, params, view, columns, defaultLabel, className }: {
-  path: string; params: SearchParams; view: ListView; columns: { key: string; label: string }[]; defaultLabel: string;
+  path: string; params: SearchParams; view: ListView; columns: { key: string; label: string; asc?: string; desc?: string }[]; defaultLabel: string;
   className?: string;
 }) {
   const choices: Choice[] = [
     { sort: null, dir: "asc", label: defaultLabel },
-    ...columns.flatMap(({ key, label }): Choice[] => [
-      { sort: key, dir: "asc", label: `${label}, A to Z` },
-      { sort: key, dir: "desc", label: `${label}, Z to A` },
+    ...columns.flatMap(({ key, label, asc = "A to Z", desc = "Z to A" }): Choice[] => [
+      { sort: key, dir: "asc", label: `${label}, ${asc}` },
+      { sort: key, dir: "desc", label: `${label}, ${desc}` },
     ]),
   ];
   const isCurrent = (c: Choice) => c.sort === view.sort && (c.sort === null || c.dir === view.dir);

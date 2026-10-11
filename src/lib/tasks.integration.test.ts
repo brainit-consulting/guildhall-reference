@@ -7,7 +7,7 @@ import { createCompany, deleteCompany, EMPTY_COMPANY } from "./companies";
 import { createContact, deleteContact, EMPTY_CONTACT } from "./contacts";
 import { createDeal, deleteDeal, EMPTY_DEAL } from "./deals";
 import {
-  addTask, createTask, createTaskOn, dueTasks, listTaskTargetChoices, listTasks, PICK_TARGET, setTaskDone, type TaskTarget,
+  addTask, createTask, createTaskOn, dueTasks, listDueTasks, listTaskTargetChoices, listTasks, PICK_TARGET, setTaskDone, type TaskTarget,
 } from "./tasks";
 
 let t: { db: Db; close(): Promise<void> };
@@ -187,6 +187,26 @@ describe("Home's tasks", () => {
     const on = await setUp();
     await addTask(t.db, on.deal, { title: "Send the quote", dueOn: "2026-10-13" });
     expect(await dueTasks(t.db, "2026-10-12")).toEqual({ overdue: [], today: [] });
+  });
+});
+
+describe("the Tasks page's Due filter", () => {
+  it("lists exactly Home's overdue and due today tasks for the same day", async () => {
+    const on = await setUp();
+    await addTask(t.db, on.deal, { title: "Send the quote", dueOn: "2026-10-11" });
+    await addTask(t.db, on.contact, { title: "Call Wat back", dueOn: "2026-09-30" });
+    await addTask(t.db, on.company, { title: "Book a visit", dueOn: "2026-10-12" });
+    await addTask(t.db, on.contact, { title: "Post the samples", dueOn: "2026-10-13" });
+    const done = (await addTask(t.db, on.deal, { title: "Measure the roof", dueOn: "2026-10-12" })).id!;
+    await setTaskDone(t.db, done, true);
+
+    for (const today of ["2026-10-12", "2026-10-13", "2026-09-01"]) {
+      const home = await dueTasks(t.db, today);
+      expect(await listDueTasks(t.db, "overdue", today)).toEqual(home.overdue);
+      expect(await listDueTasks(t.db, "today", today)).toEqual(home.today);
+    }
+    expect((await listDueTasks(t.db, "overdue", "2026-10-12")).map((x) => x.title)).toEqual(["Call Wat back", "Send the quote"]);
+    expect((await listDueTasks(t.db, "today", "2026-10-12")).map((x) => x.title)).toEqual(["Book a visit"]);
   });
 });
 

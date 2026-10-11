@@ -162,3 +162,18 @@ export async function dueTasks(db: Db, today: string): Promise<{ overdue: TaskLi
     today: open.filter((t) => dueWhen(t.dueOn, today) === "today"),
   };
 }
+
+// The Tasks page's Due filter (`/tasks?due=overdue`), where Home's counts link to.
+export const TASK_DUES = ["overdue", "today"] as const;
+export type TaskDue = (typeof TASK_DUES)[number];
+
+// Anything but a known value is ignored, so a tampered address shows the normal list.
+export function readTaskDue(value: string | string[] | undefined): TaskDue | null {
+  const one = Array.isArray(value) ? value[0] : value;
+  return TASK_DUES.find((d) => d === one) ?? null;
+}
+
+// One half of Home's dueTasks, so the page and Home can't disagree.
+export async function listDueTasks(db: Db, due: TaskDue, today: string): Promise<TaskLine[]> {
+  return (await dueTasks(db, today))[due];
+}

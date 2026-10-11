@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkTask } from "./tasks";
+import { checkTask, readTarget } from "./tasks";
 
 describe("checkTask", () => {
   it("trims the title and keeps the day", () => {
@@ -23,5 +23,19 @@ describe("checkTask", () => {
 
   it("explains both at once", () => {
     expect(checkTask({ title: "", dueOn: "" }).errors).toEqual({ title: "Write what you promised.", dueOn: "Pick a due date." });
+  });
+});
+
+describe("readTarget", () => {
+  it("reads the kind and the id of a picked value", () => {
+    expect(readTarget("deal:abc")).toEqual({ type: "deal", id: "abc" });
+    expect(readTarget("contact:abc")).toEqual({ type: "contact", id: "abc" });
+    expect(readTarget(" company:abc ")).toEqual({ type: "company", id: "abc" });
+  });
+
+  it("gives nothing for nothing picked or a kind Guildhall doesn't know", () => {
+    for (const value of ["", "deal", "deal:", ":abc", "invoice:abc", "deal:abc:def", "Deal:abc"]) {
+      expect(readTarget(value)).toBeNull();
+    }
   });
 });

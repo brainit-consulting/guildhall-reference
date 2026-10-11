@@ -6,7 +6,9 @@ import { task } from "@/lib/db/schema";
 import { createCompany, deleteCompany, EMPTY_COMPANY } from "./companies";
 import { createContact, deleteContact, EMPTY_CONTACT } from "./contacts";
 import { createDeal, deleteDeal, EMPTY_DEAL } from "./deals";
-import { addTask, createTask, dueTasks, listTasks, setTaskDone, type TaskTarget } from "./tasks";
+import {
+  addTask, createTask, createTaskOn, dueTasks, listTaskTargetChoices, listTasks, PICK_TARGET, setTaskDone, type TaskTarget,
+} from "./tasks";
 
 let t: { db: Db; close(): Promise<void> };
 beforeEach(async () => { t = await createTestDb(); });
@@ -185,5 +187,53 @@ describe("Home's tasks", () => {
     const on = await setUp();
     await addTask(t.db, on.deal, { title: "Send the quote", dueOn: "2026-10-13" });
     expect(await dueTasks(t.db, "2026-10-12")).toEqual({ overdue: [], today: [] });
+  });
+});
+
+describe("picking what a task is for", () => {
+  it("offers every contact, company and deal A to Z, each with its kind", async () => {
+    const on = await setUp();
+    await createContact(t.db, { ...EMPTY_CONTACT, name: "alice Fermor" });
+    await createDeal(t.db, { ...EMPTY_DEAL, title: "Mend the gate" });
+    expect(await listTaskTargetChoices(t.db)).toEqual([
+      { value: expect.stringMatching(/^contact:/), name: "alice Fermor", detail: "Contact" },
+      { value: `company:${on.company.id}`, name: "Lynn Tilers", detail: "Company" },
+      { value: expect.stringMatching(/^deal:/), name: "Mend the gate", detail: "Deal" },
+      { value: `deal:${on.deal.id}`, name: "Re-roof the hall", detail: "Deal · Lynn Tilers" },
+      { value: `contact:${on.contact.id}`, name: "Wat Tyler", detail: "Contact · Lynn Tilers" },
+    ]);
+  });
+
+  it("offers nothing when there are no records", async () => {
+    expect(await listTaskTargetChoices(t.db)).toEqual([]);
+  });
+
+  it("saves a task on whichever kind was picked", async () => {
+    const on = await setUp();
+    for (const target of [on.contact, on.company, on.deal]) {
+      const saved = await createTaskOn(t.db, `${target.type}:${target.id}`, { title: `On the ${target.type}`, dueOn: "2026-10-12" });
+      expect(saved.errors).toBeNull();
+      expect(await titles({ on: target })).toEqual([`On the ${target.type}`]);
+    }
+  });
+
+  it("asks for a pick, with the other problems, when nothing was picked", async () => {
+    await setUp();
+    expect(await createTaskOn(t.db, "", { title: "Call back", dueOn: "2026-10-12" }))
+      .toEqual({ id: null, errors: { target: PICK_TARGET } });
+    expect(await createTaskOn(t.db, "invoice:1", { title: "", dueOn: "" }))
+      .toEqual({ id: null, errors: { target: PICK_TARGET, title: "Write what you promised.", dueOn: "Pick a due date." } });
+    expect(await t.db.select().from(task)).toEqual([]);
+  });
+
+  it("says so when the picked record has gone or the id is made up", async () => {
+    const on = await setUp();
+    await deleteDeal(t.db, on.deal.id);
+    for (const picked of [`deal:${on.deal.id}`, "deal:not-an-id", `company:${UNKNOWN}`]) {
+      const saved = await createTaskOn(t.db, picked, { title: "Call back", dueOn: "2026-10-12" });
+      expect(saved.id).toBeNull();
+      expect(saved.errors?.target).toMatch(/isn't in Guildhall any more/);
+    }
+    expect(await t.db.select().from(task)).toEqual([]);
   });
 });

@@ -3,8 +3,11 @@ import { Button } from "@/components/ui/button";
 import { listAllowedEmails } from "@/lib/access";
 import { requireOwner } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
+import { enquiryFormUrl } from "@/lib/enquiry-form";
+import { env } from "@/lib/env";
 import { removeAllowedEmailAction } from "./actions";
 import { AllowedEmailForm } from "./allowed-email-form";
+import { CopyAddress } from "./copy-address";
 
 export const metadata: Metadata = { title: "Settings · Guildhall" };
 
@@ -47,6 +50,12 @@ export default async function SettingsPage() {
             </tbody>
           </table>
         )}
+      </section>
+
+      <section aria-labelledby="enquiry-heading" className="mt-12 border-t border-rule pt-6">
+        <h2 id="enquiry-heading" className="font-display text-2xl text-ink">Your enquiry form</h2>
+        <p className="mt-2 text-muted">Put this link on your website. Anyone can use it to ask you for a quote, without an account.</p>
+        <CopyAddress url={enquiryFormUrl(env.authUrl)} />
       </section>
     </main>
   );

@@ -4,7 +4,7 @@ import type { Db } from "@/lib/db/client";
 import { company, contact } from "@/lib/db/schema";
 import { createCompany, EMPTY_COMPANY } from "./companies";
 import {
-  type ContactView, createContact, deleteContact, EMPTY_CONTACT, getContact, listContacts, updateContact,
+  type ContactView, countContacts, createContact, deleteContact, EMPTY_CONTACT, getContact, listContacts, updateContact,
 } from "./contacts";
 
 let t: { db: Db; close(): Promise<void> };
@@ -187,5 +187,19 @@ describe("searching and sorting the list", () => {
       .toEqual(["agnes Paston", "John Acmeson", "Margery Kempe"]);
     expect(names(await listContacts(t.db, view({ q: "acme", sort: "company", dir: "desc" }))))
       .toEqual(["agnes Paston", "John Acmeson", "Margery Kempe"]);
+  });
+});
+
+describe("counting contacts", () => {
+  it("counts every contact, goes up with each one added and down with each one deleted", async () => {
+    expect(await countContacts(t.db)).toBe(0);
+    const { id } = await createContact(t.db, WAT);
+    await createContact(t.db, { ...EMPTY_CONTACT, name: "Margery Kempe" });
+    expect(await countContacts(t.db)).toBe(2);
+    // a form with a problem saves nothing, so the figure stays
+    await createContact(t.db, { ...WAT, name: "" });
+    expect(await countContacts(t.db)).toBe(2);
+    await deleteContact(t.db, id!);
+    expect(await countContacts(t.db)).toBe(1);
   });
 });

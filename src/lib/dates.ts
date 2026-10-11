@@ -2,6 +2,24 @@
 // September ("Sep" or "Sept"), and a calendar day has no time zone to convert.
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+// The business's time zone: its "today" decides what is overdue, wherever the server or the reader is. A fact about
+// the business, like CURRENCY in money.ts; this is the one line to change.
+export const TIME_ZONE = "America/New_York";
+
+// The calendar day (YYYY-MM-DD) it is at `now` in `timeZone`. Numeric parts only, so ICU's month names don't matter.
+export function todayIn(timeZone: string, now: Date): string {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" })
+    .formatToParts(now);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)!.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+// Where a due day stands against today; both YYYY-MM-DD, which compare correctly as strings.
+export function dueWhen(dueOn: string, today: string): "overdue" | "today" | "later" {
+  if (dueOn < today) return "overdue";
+  return dueOn === today ? "today" : "later";
+}
+
 // A real calendar day as YYYY-MM-DD: "2026-02-30" is refused rather than rolled into March.
 export function isDay(s: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;

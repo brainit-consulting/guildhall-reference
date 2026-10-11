@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { Db } from "@/lib/db/client";
 import { company, contact, deal, task } from "@/lib/db/schema";
 import { exists } from "@/lib/activities";
-import { isDay } from "@/lib/dates";
+import { dueWhen, isDay } from "@/lib/dates";
 
 // The one record a task is about.
 export type TaskTarget = { type: "contact" | "company" | "deal"; id: string };
@@ -152,4 +152,13 @@ export async function listTasks(db: Db, filter: TaskFilter = {}): Promise<TaskLi
       : r.companyId ? { type: "company", id: r.companyId, name: r.companyName! }
       : { type: "deal", id: r.dealId!, name: r.dealTitle! },
   }));
+}
+
+// Home's open tasks due by `today` (YYYY-MM-DD, the business's day): overdue oldest first, then those due today.
+export async function dueTasks(db: Db, today: string): Promise<{ overdue: TaskLine[]; today: TaskLine[] }> {
+  const open = await listTasks(db, { status: "open", dueBy: today });
+  return {
+    overdue: open.filter((t) => dueWhen(t.dueOn, today) === "overdue"),
+    today: open.filter((t) => dueWhen(t.dueOn, today) === "today"),
+  };
 }

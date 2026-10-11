@@ -7,7 +7,7 @@ import { createCompany, deleteCompany, EMPTY_COMPANY } from "./companies";
 import { createContact, deleteContact, EMPTY_CONTACT } from "./contacts";
 import { createDeal, deleteDeal, EMPTY_DEAL } from "./deals";
 import {
-  addTask, createTask, createTaskOn, listTaskTargetChoices, listTasks, PICK_TARGET, setTaskDone, type TaskTarget,
+  addTask, createTask, createTaskOn, dueTasks, listTaskTargetChoices, listTasks, PICK_TARGET, setTaskDone, type TaskTarget,
 } from "./tasks";
 
 let t: { db: Db; close(): Promise<void> };
@@ -157,6 +157,36 @@ describe("deleting the record a task is on", () => {
     expect(await titles({})).toEqual(["On the company"]);
     await deleteCompany(t.db, on.company.id);
     expect(await t.db.select().from(task).where(eq(task.title, "On the company"))).toEqual([]);
+  });
+});
+
+describe("Home's tasks", () => {
+  it("splits open tasks into overdue, oldest first, and due today; later and done tasks are left out", async () => {
+    const on = await setUp();
+    await addTask(t.db, on.deal, { title: "Send the quote", dueOn: "2026-10-11" });
+    await addTask(t.db, on.contact, { title: "Call Wat back", dueOn: "2026-09-30" });
+    await addTask(t.db, on.company, { title: "Book a visit", dueOn: "2026-10-12" });
+    await addTask(t.db, on.contact, { title: "Post the samples", dueOn: "2026-10-13" });
+    const done = (await addTask(t.db, on.deal, { title: "Measure the roof", dueOn: "2026-10-10" })).id!;
+    await setTaskDone(t.db, done, true);
+
+    const due = await dueTasks(t.db, "2026-10-12");
+    expect(due.overdue.map((x) => [x.title, x.dueOn, x.on.name])).toEqual([
+      ["Call Wat back", "2026-09-30", "Wat Tyler"],
+      ["Send the quote", "2026-10-11", "Re-roof the hall"],
+    ]);
+    expect(due.today.map((x) => [x.title, x.on.name])).toEqual([["Book a visit", "Lynn Tilers"]]);
+
+    // a day later, today's task is overdue and tomorrow's is due
+    const next = await dueTasks(t.db, "2026-10-13");
+    expect(next.overdue.map((x) => x.title)).toEqual(["Call Wat back", "Send the quote", "Book a visit"]);
+    expect(next.today.map((x) => x.title)).toEqual(["Post the samples"]);
+  });
+
+  it("is empty with nothing open due by today", async () => {
+    const on = await setUp();
+    await addTask(t.db, on.deal, { title: "Send the quote", dueOn: "2026-10-13" });
+    expect(await dueTasks(t.db, "2026-10-12")).toEqual({ overdue: [], today: [] });
   });
 });
 

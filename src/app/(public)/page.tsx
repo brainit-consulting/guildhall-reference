@@ -7,7 +7,7 @@ import { BUSINESS_NAME } from "@/lib/brand";
 export default async function WelcomePage() {
   if (await getSession()) redirect("/home");
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center px-6">
+    <main className="mx-auto flex w-full flex-1 max-w-2xl flex-col justify-center px-6">
       {/* decorative: the heading under it says the same words */}
       <BrandLogo size={64} alt="" className="md:-ml-6" />
       <h1 className="mt-6 font-display text-5xl break-words text-ink -ml-px md:-ml-6">{BUSINESS_NAME}</h1>

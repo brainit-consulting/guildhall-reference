@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Ask for a quote" };
 
 export default function EnquirePage() {
   return (
-    <main className="mx-auto max-w-xl px-6 py-12 md:py-20">
+    <main className="mx-auto w-full max-w-xl px-6 py-12 md:py-20">
       <h1 className="font-display text-4xl text-ink -ml-px md:-ml-6 wrap-anywhere">{BUSINESS_NAME}</h1>
       <p className="mt-3 border-t border-rule pt-3 text-ink">Ask for a quote. We&apos;ll get back to you.</p>
       <EnquiryForm />

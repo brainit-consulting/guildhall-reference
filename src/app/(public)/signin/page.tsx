@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Sign in" };
 export default async function SignInPage() {
   if (await getSession()) redirect("/home");
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-12">
+    <main className="mx-auto flex w-full flex-1 max-w-md flex-col justify-center px-6 py-12">
       <h1 className="font-display text-4xl text-ink -ml-px md:-ml-6">Sign in</h1>
       <p className="mt-3 text-muted">Welcome back to {BUSINESS_NAME}.</p>
       <AuthForm mode="signin" />

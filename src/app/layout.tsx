@@ -18,8 +18,8 @@ const plex = IBM_Plex_Sans({
   variable: "--font-plex",
 });
 
-// Pages give only their own part of the title. The template skips src/app/page.tsx (same segment), so the welcome
-// tab shows the default, the bare name.
+// Pages give only their own part of the title. The welcome page sets no title, so its tab shows the default,
+// the bare name.
 export const metadata: Metadata = {
   title: { default: BUSINESS_NAME, template: `%s · ${BUSINESS_NAME}` },
   description: `Customers, deals and tasks for ${BUSINESS_NAME}.`,

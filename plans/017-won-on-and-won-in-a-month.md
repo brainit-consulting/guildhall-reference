@@ -21,7 +21,7 @@ the form, the board and later MCP tools all get it. Won to Won keeps the day (`c
 stage clears it. The migration fills it for deals already at Won from their latest move into Won, else `updated_at`,
 converted to the business's time zone in SQL (measured: PGlite has the zone data). `dates.ts` gains `monthIn`,
 `isMonth`, `formatMonth`; `deals.ts` gains `wonInMonth` and a `won` filter in `readDealView`/`dealWhere`, with
-`wonDealsTotal(db, view)` for the figures row.
+`listedDealsTotal(db, view)` for the figures row.
 
 ## Tasks
 

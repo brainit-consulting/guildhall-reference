@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { checkDeal, DEAL_STAGES, EMPTY_DEAL, isOpen, stageChangeText } from "./deals";
+import { checkDeal, DEAL_STAGES, EMPTY_DEAL, isOpen, readDealView, stageChangeText } from "./deals";
+
+describe("readDealView", () => {
+  it("reads the search, sort, stage and open only from the address", () => {
+    expect(readDealView({ q: " acme ", sort: "value", dir: "desc", stage: "Proposal", open: "1" }))
+      .toEqual({ q: "acme", sort: "value", dir: "desc", stage: "Proposal", open: true });
+  });
+
+  it("is the default list when there is nothing in the address", () => {
+    expect(readDealView({})).toEqual({ q: "", sort: null, dir: "asc", stage: null, open: false });
+  });
+
+  it("ignores an unknown stage or sort, a lower-case stage, and open set to anything but 1", () => {
+    expect(readDealView({ stage: "Maybe", sort: "drop", open: "yes" })).toMatchObject({ stage: null, sort: null, open: false });
+    expect(readDealView({ stage: "won", open: "true" })).toMatchObject({ stage: null, open: false });
+    expect(readDealView({ stage: ["Won", "Lost"], open: ["1", "0"] })).toMatchObject({ stage: "Won", open: true });
+  });
+});
 
 const ID = "6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b";
 

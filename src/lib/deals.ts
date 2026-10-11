@@ -1,12 +1,13 @@
 // Deals (B9): work the business hopes to win. Plain functions on `db`, so the pages and later the pipeline, the
 // dashboard and the MCP tools (get_deal, list_pipeline) share one set of rules.
-import { count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, getTableColumns, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
 import { addActivity } from "@/lib/activities";
 import { isDay } from "@/lib/dates";
 import { company, contact, deal } from "@/lib/db/schema";
 import { DEAL_STAGES, OPEN_STAGES, type DealStage } from "@/lib/deal-stages";
+import { likePattern, readListView, type ListView, type SearchParams } from "@/lib/list-view";
 import { parseMoney } from "@/lib/money";
 
 export type Deal = typeof deal.$inferSelect;
@@ -70,8 +71,49 @@ function selectDeals(db: Db) {
     .leftJoin(company, eq(deal.companyId, company.id));
 }
 
-export async function listDeals(db: Db): Promise<DealWithNames[]> {
-  return selectDeals(db).orderBy(desc(deal.createdAt), desc(deal.id));
+// The columns the Deals list can sort by, as they appear in the address (`?sort=value`).
+export const DEAL_SORTS = ["title", "company", "value", "stage", "close", "activity"] as const;
+export type DealSort = (typeof DEAL_SORTS)[number];
+// The list view plus the Deals filters: one stage (`stage=Proposal`) and open deals only (`open=1`).
+export type DealView = ListView<DealSort> & { stage: DealStage | null; open: boolean };
+
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+
+// An unknown stage, or `open` set to anything but 1, is ignored, like any other junk in the address.
+export function readDealView(params: SearchParams): DealView {
+  const stage = DEAL_STAGES.find((s) => s === one(params.stage)) ?? null;
+  return { ...readListView(params, DEAL_SORTS), stage, open: one(params.open) === "1" };
+}
+
+// The one where-clause for the table and the open total, so the two can't disagree. A search matches the title, the
+// company's name, or the contact's name or email, any capitals. Stage Won with open only matches nothing.
+function dealWhere(view: DealView): SQL | undefined {
+  const pattern = view.q ? likePattern(view.q) : null;
+  return and(
+    pattern ? or(ilike(deal.title, pattern), ilike(company.name, pattern), ilike(contact.name, pattern), ilike(contact.email, pattern)) : undefined,
+    view.stage ? eq(deal.stage, view.stage) : undefined,
+    view.open ? inArray(deal.stage, [...OPEN_STAGES]) : undefined,
+  );
+}
+
+// Text ignores capitals; value sorts as numeric, dates as dates; stage is a Postgres enum, which sorts in the order
+// it was declared (New, Contacted, Proposal, Won, Lost).
+const SORT_BY = {
+  title: sql`lower(${deal.title})`,
+  company: sql`lower(${company.name})`,
+  value: sql`${deal.value}`,
+  stage: sql`${deal.stage}`,
+  close: sql`${deal.expectedClose}`,
+  activity: sql`${deal.lastActivityAt}`,
+} as const;
+
+// With no view (or no sort), newest added first, as the pipeline board expects. A sort puts blanks last both ways;
+// ties go by title, then id, so the order is the same on every load.
+export async function listDeals(db: Db, view?: DealView): Promise<DealWithNames[]> {
+  const query = selectDeals(db).where(view && dealWhere(view));
+  if (!view?.sort) return query.orderBy(desc(deal.createdAt), desc(deal.id));
+  return query.orderBy(sql`${SORT_BY[view.sort]} ${sql.raw(view.dir === "desc" ? "desc" : "asc")} nulls last`,
+    sql`lower(${deal.title})`, asc(deal.id));
 }
 
 export async function getDeal(db: Db, id: string): Promise<DealWithNames | null> {
@@ -81,10 +123,13 @@ export async function getDeal(db: Db, id: string): Promise<DealWithNames | null>
 }
 
 // How many deals are open and what they are worth. Postgres adds the numerics, so the total is exact; deals with no
-// value count towards the number but add nothing.
-export async function openDealsTotal(db: Db): Promise<{ count: number; total: string }> {
+// value count towards the number but add nothing. Given the list's view, only the open deals the table shows count.
+export async function openDealsTotal(db: Db, view?: DealView): Promise<{ count: number; total: string }> {
   const [row] = await db.select({ count: count(), total: sql<string>`coalesce(sum(${deal.value}), 0)::text` })
-    .from(deal).where(inArray(deal.stage, [...OPEN_STAGES]));
+    .from(deal)
+    .leftJoin(contact, eq(deal.contactId, contact.id))
+    .leftJoin(company, eq(deal.companyId, company.id))
+    .where(and(inArray(deal.stage, [...OPEN_STAGES]), view && dealWhere(view)));
   return { count: row.count, total: row.total };
 }
 

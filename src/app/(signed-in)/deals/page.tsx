@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSession } from "@/lib/auth/session";
-import { formatDay } from "@/lib/dates";
+import { formatDay, formatMonth } from "@/lib/dates";
 import { db } from "@/lib/db/client";
 import { isCold } from "@/lib/cold";
-import { listDeals, openDealsTotal, readDealView, type DealWithNames } from "@/lib/deals";
+import { listDeals, listedDealsTotal, openDealsTotal, readDealView, type DealWithNames } from "@/lib/deals";
 import { listHref, type SearchParams } from "@/lib/list-view";
 import { formatMoney } from "@/lib/money";
 import { GoingCold, OpenOnly, StageFilter } from "./deal-filters";
@@ -31,13 +31,16 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
   await requireSession();
   const params = await searchParams;
   const view = readDealView(params);
-  // the same view and moment for both, so the open figures count only the open deals the table shows, and the marks
-  // agree with the Going cold filter
+  // the same view and moment for both, so the figures count only the deals the table shows (the open ones, or with
+  // `won` set, every one listed: all at Won, so the open figures would read 0), and the marks agree with Going cold
   const at = new Date();
-  const [deals, open] = await Promise.all([listDeals(db, view, at), openDealsTotal(db, view, at)]);
+  const [deals, figures] = await Promise.all([
+    listDeals(db, view, at), view.won ? listedDealsTotal(db, view, at) : openDealsTotal(db, view, at),
+  ]);
+  const [countLabel, valueLabel] = view.won ? ["Won deals", "Won value"] : ["Open deals", "Open value"];
   const now = at.toISOString();
   const list = { path: PATH, params, view };
-  const filtered = view.stage !== null || view.open || view.cold;
+  const filtered = view.stage !== null || view.open || view.cold || view.won !== null;
   return (
     <main className="max-w-5xl px-6 py-12 md:px-12">
       <div className="flex flex-wrap items-baseline justify-between gap-4">
@@ -48,14 +51,14 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
       </div>
 
       {/* The ledger's running figure: open means New, Contacted or Proposal, among the deals listed below. */}
-      <dl aria-label="Open deals" className="mt-8 flex flex-wrap gap-x-10 gap-y-2 border-y border-rule py-4">
+      <dl aria-label={countLabel} className="mt-8 flex flex-wrap gap-x-10 gap-y-2 border-y border-rule py-4">
         <div>
-          <dt className="text-sm text-muted">Open deals</dt>
-          <dd className="font-display text-2xl tabular-nums text-ink">{open.count}</dd>
+          <dt className="text-sm text-muted">{countLabel}</dt>
+          <dd className="font-display text-2xl tabular-nums text-ink">{figures.count}</dd>
         </div>
         <div>
-          <dt className="text-sm text-muted">Open value</dt>
-          <dd className="font-display text-2xl tabular-nums text-ink">{formatMoney(open.total)}</dd>
+          <dt className="text-sm text-muted">{valueLabel}</dt>
+          <dd className="font-display text-2xl tabular-nums text-ink">{formatMoney(figures.total)}</dd>
         </div>
       </dl>
 
@@ -68,10 +71,20 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
         <SortBy {...list} columns={COLUMNS} defaultLabel="Newest added first" className="w-full md:hidden" />
       </div>
 
+      {/* Set only from the address (Home's "Won this month"), so it says so here and can be taken off. */}
+      {view.won && (
+        <p className="mt-6 text-ink">
+          Won in {formatMonth(view.won)}.{" "}
+          <Link href={listHref(PATH, params, { won: null })} className="text-accent underline-offset-4 hover:underline">
+            Show every month
+          </Link>
+        </p>
+      )}
+
       {deals.length === 0 && (view.q || filtered) ? (
         <p className="mt-6 border-t border-rule pt-6 text-muted wrap-anywhere">
           {view.q ? <>No deals match &quot;{view.q}&quot;{filtered && " with these filters"}.</> : "No deals match these filters."}{" "}
-          <Link href={listHref(PATH, params, { q: null, stage: null, open: null, cold: null })} className="text-accent underline-offset-4 hover:underline">
+          <Link href={listHref(PATH, params, { q: null, stage: null, open: null, cold: null, won: null })} className="text-accent underline-offset-4 hover:underline">
             {view.q && filtered ? "Clear search and filters" : view.q ? "Clear search" : "Clear filters"}
           </Link>
         </p>

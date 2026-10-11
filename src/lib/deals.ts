@@ -1,11 +1,11 @@
 // Deals (B9): work the business hopes to win. Plain functions on `db`, so the pages and later the pipeline, the
 // dashboard and the MCP tools (get_deal, list_pipeline) share one set of rules.
-import { and, asc, count, desc, eq, getTableColumns, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, getTableColumns, gte, ilike, inArray, lt, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
 import { addActivity } from "@/lib/activities";
 import { coldBefore } from "@/lib/cold";
-import { isDay } from "@/lib/dates";
+import { isDay, isMonth, nextMonthStart, TIME_ZONE, todayIn } from "@/lib/dates";
 import { company, contact, deal } from "@/lib/db/schema";
 import { DEAL_STAGES, OPEN_STAGES, type DealStage } from "@/lib/deal-stages";
 import { likePattern, readListView, type ListView, type SearchParams } from "@/lib/list-view";
@@ -75,16 +75,22 @@ function selectDeals(db: Db) {
 // The columns the Deals list can sort by, as they appear in the address (`?sort=value`).
 export const DEAL_SORTS = ["title", "company", "value", "stage", "close", "activity"] as const;
 export type DealSort = (typeof DEAL_SORTS)[number];
-// The list view plus the Deals filters: one stage (`stage=Proposal`), open deals only (`open=1`) and deals going
-// cold (`cold=1`, which implies open).
-export type DealView = ListView<DealSort> & { stage: DealStage | null; open: boolean; cold: boolean };
+// The list view plus the Deals filters: one stage (`stage=Proposal`), open deals only (`open=1`), deals going cold
+// (`cold=1`, which implies open) and the deals won in a month (`won=2026-10`, Home's "Won this month"; only the
+// address sets it, there is no control for it).
+export type DealView = ListView<DealSort> & { stage: DealStage | null; open: boolean; cold: boolean; won: string | null };
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
-// An unknown stage, or `open` or `cold` set to anything but 1, is ignored, like any other junk in the address.
+// An unknown stage, `open` or `cold` set to anything but 1, or a `won` that isn't a real month is ignored, like any
+// other junk in the address.
 export function readDealView(params: SearchParams): DealView {
   const stage = DEAL_STAGES.find((s) => s === one(params.stage)) ?? null;
-  return { ...readListView(params, DEAL_SORTS), stage, open: one(params.open) === "1", cold: one(params.cold) === "1" };
+  const won = one(params.won);
+  return {
+    ...readListView(params, DEAL_SORTS), stage, open: one(params.open) === "1", cold: one(params.cold) === "1",
+    won: isMonth(won) ? won : null,
+  };
 }
 
 // isCold (src/lib/cold.ts) as a where-clause: open, and last touched (or added, when nothing was ever logged) before
@@ -95,7 +101,12 @@ function coldWhere(now: Date): SQL | undefined {
     sql`coalesce(${deal.lastActivityAt}, ${deal.createdAt}) < ${coldBefore(now).toISOString()}::timestamp`);
 }
 
-// The one where-clause for the table and the open total, so the two can't disagree. A search matches the title, the
+// Won in a month (YYYY-MM): on or after its 1st and before the next month's, so the index on won_on serves it.
+function wonIn(month: string): SQL | undefined {
+  return and(gte(deal.wonOn, `${month}-01`), lt(deal.wonOn, nextMonthStart(month)));
+}
+
+// The one where-clause for the table and its figures, so they can't disagree. A search matches the title, the
 // company's name, or the contact's name or email, any capitals. Stage Won with open only matches nothing.
 function dealWhere(view: DealView, now: Date): SQL | undefined {
   const pattern = view.q ? likePattern(view.q) : null;
@@ -104,6 +115,7 @@ function dealWhere(view: DealView, now: Date): SQL | undefined {
     view.stage ? eq(deal.stage, view.stage) : undefined,
     view.open ? inArray(deal.stage, [...OPEN_STAGES]) : undefined,
     view.cold ? coldWhere(now) : undefined,
+    view.won ? wonIn(view.won) : undefined,
   );
 }
 
@@ -134,15 +146,28 @@ export async function getDeal(db: Db, id: string): Promise<DealWithNames | null>
   return found ?? null;
 }
 
-// How many deals are open and what they are worth. Postgres adds the numerics, so the total is exact; deals with no
-// value count towards the number but add nothing. Given the list's view, only the open deals the table shows count.
-export async function openDealsTotal(db: Db, view?: DealView, now = new Date()): Promise<{ count: number; total: string }> {
+export type DealsTotal = { count: number; total: string };
+
+// How many deals match and what they are worth. Postgres adds the numerics, so the total is exact; deals with no value
+// count towards the number but add nothing. Joined as the list is, so the list's where-clause works here.
+async function dealsTotal(db: Db, where: SQL | undefined): Promise<DealsTotal> {
   const [row] = await db.select({ count: count(), total: sql<string>`coalesce(sum(${deal.value}), 0)::text` })
     .from(deal)
     .leftJoin(contact, eq(deal.contactId, contact.id))
     .leftJoin(company, eq(deal.companyId, company.id))
-    .where(and(inArray(deal.stage, [...OPEN_STAGES]), view && dealWhere(view, now)));
+    .where(where);
   return { count: row.count, total: row.total };
+}
+
+// How many deals are open and what they are worth. Given the list's view, only the open deals the table shows count.
+// `now` decides which deals are going cold; pass the one the list was read with.
+export async function openDealsTotal(db: Db, view?: DealView, now = new Date()): Promise<DealsTotal> {
+  return dealsTotal(db, and(inArray(deal.stage, [...OPEN_STAGES]), view && dealWhere(view, now)));
+}
+
+// Every deal the list shows, whatever its stage: the figures when the list is the deals won in a month.
+export async function listedDealsTotal(db: Db, view: DealView, now = new Date()): Promise<DealsTotal> {
+  return dealsTotal(db, dealWhere(view, now));
 }
 
 // The open deals going cold at `now`, with their company's name and value, longest quiet first (ties by title, then
@@ -150,6 +175,13 @@ export async function openDealsTotal(db: Db, view?: DealView, now = new Date()):
 export async function coldDeals(db: Db, now = new Date()): Promise<DealWithNames[]> {
   return selectDeals(db).where(coldWhere(now))
     .orderBy(sql`coalesce(${deal.lastActivityAt}, ${deal.createdAt}) asc`, sql`lower(${deal.title})`, asc(deal.id));
+}
+
+// How many deals were won in a month (YYYY-MM) and what they are worth: Home's "Won this month". A deal won and then
+// moved out of Won has no won_on, so it no longer counts.
+export async function wonInMonth(db: Db, month: string): Promise<DealsTotal> {
+  if (!isMonth(month)) return { count: 0, total: "0" };
+  return dealsTotal(db, wonIn(month));
 }
 
 // The contact or company may have been deleted while the form was open; say so rather than fail on the foreign key.
@@ -168,12 +200,14 @@ async function linksGone(db: Db, values: DealValues): Promise<DealErrors | null>
 
 type Saved = { id: string; errors: null } | { id: null; errors: DealErrors };
 
-export async function createDeal(db: Db, input: DealInput): Promise<Saved> {
+// `now` decides the business's day a deal added at Won was won; tests pass it, the app lets it default.
+export async function createDeal(db: Db, input: DealInput, now = new Date()): Promise<Saved> {
   const checked = checkDeal(input);
   if (checked.errors) return { id: null, errors: checked.errors };
   const gone = await linksGone(db, checked.values);
   if (gone) return { id: null, errors: gone };
-  const [row] = await db.insert(deal).values(checked.values).returning({ id: deal.id });
+  const wonOn = checked.values.stage === "Won" ? todayIn(TIME_ZONE, now) : null;
+  const [row] = await db.insert(deal).values({ ...checked.values, wonOn }).returning({ id: deal.id });
   return { id: row.id, errors: null };
 }
 
@@ -184,9 +218,13 @@ export function stageChangeText(from: DealStage, to: DealStage): string {
 
 // Sets a deal's fields and returns the stage it had, read by the same statement under a row lock, so two people
 // moving one deal at once each log the move they actually made. null when the deal isn't there.
-async function setDeal(db: Db, id: string, values: Partial<DealValues>): Promise<DealStage | null> {
+// Every stage change passes here, so here a deal learns the day it was won (the business's today at `now`): kept when
+// it is saved at Won again, cleared when it leaves Won.
+async function setDeal(db: Db, id: string, values: Partial<DealValues>, now: Date): Promise<DealStage | null> {
+  const won = values.stage === undefined ? {}
+    : { wonOn: values.stage === "Won" ? sql`coalesce(${deal.wonOn}, ${todayIn(TIME_ZONE, now)}::date)` : null };
   const old = db.select({ id: deal.id, stage: deal.stage }).from(deal).where(eq(deal.id, id)).for("update").as("old");
-  const [row] = await db.update(deal).set({ ...values, updatedAt: new Date() })
+  const [row] = await db.update(deal).set({ ...values, ...won, updatedAt: now })
     .from(old).where(eq(deal.id, old.id)).returning({ from: old.stage });
   return row?.from ?? null;
 }
@@ -199,13 +237,15 @@ async function logStageChange(db: Db, id: string, userId: string | null, from: D
 }
 
 // null when there is no such deal (deleted in another tab, or a tampered id).
-export async function updateDeal(db: Db, id: string, input: DealInput, userId: string | null): Promise<Saved | null> {
+export async function updateDeal(
+  db: Db, id: string, input: DealInput, userId: string | null, now = new Date(),
+): Promise<Saved | null> {
   if (!isId(id)) return null;
   const checked = checkDeal(input);
   if (checked.errors) return { id: null, errors: checked.errors };
   const gone = await linksGone(db, checked.values);
   if (gone) return { id: null, errors: gone };
-  const from = await setDeal(db, id, checked.values);
+  const from = await setDeal(db, id, checked.values, now);
   if (!from) return null;
   await logStageChange(db, id, userId, from, checked.values.stage);
   return { id, errors: null };
@@ -215,14 +255,14 @@ export async function updateDeal(db: Db, id: string, input: DealInput, userId: s
 // the stage it left and the one it reached; null for no such deal or no such stage. Moving to the stage it is already
 // in changes and logs nothing.
 export async function moveDealStage(
-  db: Db, id: string, stage: string, userId: string | null,
+  db: Db, id: string, stage: string, userId: string | null, now = new Date(),
 ): Promise<{ from: DealStage; to: DealStage } | null> {
   const to = DEAL_STAGES.find((s) => s === stage);
   if (!to || !isId(id)) return null;
   const [found] = await db.select({ stage: deal.stage }).from(deal).where(eq(deal.id, id)).limit(1);
   if (!found) return null;
   if (found.stage === to) return { from: to, to };
-  const from = await setDeal(db, id, { stage: to });
+  const from = await setDeal(db, id, { stage: to }, now);
   if (!from) return null; // deleted in between
   await logStageChange(db, id, userId, from, to);
   return { from, to };

@@ -4,11 +4,19 @@ import { checkDeal, DEAL_STAGES, EMPTY_DEAL, isOpen, readDealView, stageChangeTe
 describe("readDealView", () => {
   it("reads the search, sort, stage, open only and going cold from the address", () => {
     expect(readDealView({ q: " acme ", sort: "value", dir: "desc", stage: "Proposal", open: "1", cold: "1" }))
-      .toEqual({ q: "acme", sort: "value", dir: "desc", stage: "Proposal", open: true, cold: true });
+      .toEqual({ q: "acme", sort: "value", dir: "desc", stage: "Proposal", open: true, cold: true, won: null });
   });
 
   it("is the default list when there is nothing in the address", () => {
-    expect(readDealView({})).toEqual({ q: "", sort: null, dir: "asc", stage: null, open: false, cold: false });
+    expect(readDealView({})).toEqual({ q: "", sort: null, dir: "asc", stage: null, open: false, cold: false, won: null });
+  });
+
+  it("reads the month won, and ignores anything that isn't a real month", () => {
+    expect(readDealView({ won: "2026-10" })).toMatchObject({ won: "2026-10" });
+    expect(readDealView({ won: ["2026-09", "2026-10"] })).toMatchObject({ won: "2026-09" });
+    for (const won of ["junk", "2026-13", "2026-00", "2026-1", "2026-10-01", ""]) {
+      expect(readDealView({ won }).won, won).toBeNull();
+    }
   });
 
   it("ignores an unknown stage or sort, a lower-case stage, and open or cold set to anything but 1", () => {

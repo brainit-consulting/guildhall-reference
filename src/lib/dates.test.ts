@@ -1,5 +1,53 @@
 import { describe, expect, it } from "vitest";
-import { addDays, dayStartIn, daysAgo, daysBetween, dueWhen, formatDay, isDay, TIME_ZONE, todayIn } from "./dates";
+import {
+  addDays, dayStartIn, daysAgo, daysBetween, dueWhen, formatDay, formatMonth, isDay, isMonth, monthIn, nextMonthStart, TIME_ZONE,
+  todayIn,
+} from "./dates";
+
+describe("monthIn", () => {
+  it("is the month in that zone, so New York's last evening of a month is still that month", () => {
+    expect(monthIn("America/New_York", new Date("2026-11-01T03:30:00Z"))).toBe("2026-10"); // 11:30pm EDT, 31 Oct
+    expect(monthIn("America/New_York", new Date("2026-11-01T04:00:00Z"))).toBe("2026-11"); // midnight EDT
+    expect(monthIn("America/New_York", new Date("2027-01-01T04:59:59Z"))).toBe("2026-12"); // EST, New Year's Eve
+    expect(monthIn("America/New_York", new Date("2027-01-01T05:00:00Z"))).toBe("2027-01");
+  });
+
+  it("works ahead of UTC too, and gives a real month for the business's zone", () => {
+    expect(monthIn("Pacific/Auckland", new Date("2026-10-31T11:00:00Z"))).toBe("2026-11");
+    expect(isMonth(monthIn(TIME_ZONE, new Date()))).toBe(true);
+  });
+});
+
+describe("isMonth", () => {
+  it("takes a real month as YYYY-MM", () => {
+    expect(isMonth("2026-10")).toBe(true);
+    expect(isMonth("2026-01")).toBe(true);
+    expect(isMonth("2026-12")).toBe(true);
+  });
+
+  it("refuses anything else", () => {
+    for (const s of ["2026-13", "2026-00", "2026-1", "26-10", "2026-10-01", "2026/10", "junk", "", " 2026-10"]) {
+      expect(isMonth(s), s).toBe(false);
+    }
+  });
+});
+
+describe("formatMonth", () => {
+  it("names the month in full, then the year", () => {
+    expect(formatMonth("2026-10")).toBe("October 2026");
+    expect(formatMonth("2026-09")).toBe("September 2026");
+    expect(formatMonth("2027-01")).toBe("January 2027");
+    expect(formatMonth("2026-12")).toBe("December 2026");
+  });
+});
+
+describe("nextMonthStart", () => {
+  it("is the 1st of the next month, into the next year after December", () => {
+    expect(nextMonthStart("2026-10")).toBe("2026-11-01");
+    expect(nextMonthStart("2026-09")).toBe("2026-10-01");
+    expect(nextMonthStart("2026-12")).toBe("2027-01-01");
+  });
+});
 
 describe("todayIn", () => {
   it("is the calendar day in that zone, either side of its midnight", () => {

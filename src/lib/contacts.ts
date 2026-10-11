@@ -1,10 +1,11 @@
 // Contacts (B7): the people the business deals with. Plain functions on `db`, so the pages and later the MCP tools
 // (add_contact, get_contact) share one set of rules.
-import { asc, desc, eq, getTableColumns } from "drizzle-orm";
+import { asc, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
 import { company, contact } from "@/lib/db/schema";
 import { authErrorMessage, isEmail } from "@/lib/auth/messages";
+import { likePattern, type ListView } from "@/lib/list-view";
 
 export type Contact = typeof contact.$inferSelect;
 // A contact as the pages show it: with its company's name, null when it has none.
@@ -46,9 +47,24 @@ function isId(id: string) {
 
 const withCompany = { ...getTableColumns(contact), companyName: company.name };
 
-export async function listContacts(db: Db): Promise<ContactWithCompany[]> {
-  return db.select(withCompany).from(contact).leftJoin(company, eq(contact.companyId, company.id))
-    .orderBy(desc(contact.createdAt), desc(contact.id));
+// The columns the Contacts list can sort by, as they appear in the address (`?sort=company`).
+export const CONTACT_SORTS = ["name", "company", "email", "phone", "title"] as const;
+export type ContactSort = (typeof CONTACT_SORTS)[number];
+export type ContactView = ListView<ContactSort>;
+
+const SORT_COLUMN = {
+  name: contact.name, company: company.name, email: contact.email, phone: contact.phone, title: contact.jobTitle,
+} as const;
+
+// With no view (or no sort), newest added first. A search matches the name, email or company name, any capitals. A
+// sort ignores capitals and puts blanks (and no company) last both ways; ties go by name, then id.
+export async function listContacts(db: Db, view?: ContactView): Promise<ContactWithCompany[]> {
+  const pattern = view?.q ? likePattern(view.q) : null;
+  const where = pattern ? or(ilike(contact.name, pattern), ilike(contact.email, pattern), ilike(company.name, pattern)) : undefined;
+  const query = db.select(withCompany).from(contact).leftJoin(company, eq(contact.companyId, company.id)).where(where);
+  if (!view?.sort) return query.orderBy(desc(contact.createdAt), desc(contact.id));
+  const by = sql`lower(nullif(${SORT_COLUMN[view.sort]}, ''))`;
+  return query.orderBy(sql`${by} ${sql.raw(view.dir === "desc" ? "desc" : "asc")} nulls last`, sql`lower(${contact.name})`, asc(contact.id));
 }
 
 // What the deal form's Contact picker offers, A to Z. The company tells two people of one name apart.

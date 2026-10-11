@@ -3,7 +3,7 @@ import { createTestDb } from "@/test/db";
 import type { Db } from "@/lib/db/client";
 import { company } from "@/lib/db/schema";
 import {
-  createCompany, deleteCompany, EMPTY_COMPANY, getCompany, listCompanies, listCompanyChoices, listCompanyContacts, updateCompany,
+  createCompany, deleteCompany, EMPTY_COMPANY, type CompanyView, getCompany, listCompanies, listCompanyChoices, listCompanyContacts, updateCompany,
 } from "./companies";
 import { createContact, EMPTY_CONTACT, getContact, listContacts } from "./contacts";
 
@@ -112,5 +112,59 @@ describe("the company picker's choices", () => {
       ["Lynn Tilers", "lynntilers.example"],
       ["Norwich Masons", null],
     ]);
+  });
+});
+
+describe("searching and sorting the list", () => {
+  const names = (rows: { name: string }[]) => rows.map((c) => c.name);
+  const view = (v: Partial<CompanyView>): CompanyView => ({ q: "", sort: null, dir: "asc", ...v });
+
+  beforeEach(async () => {
+    await t.db.insert(company).values([
+      { name: "ACME Roofing", website: null, phone: "01603 200 300", createdAt: new Date("2026-10-01T09:00:00Z") },
+      { name: "Lynn Tilers", website: "www.Acme-tiles.example", phone: null, createdAt: new Date("2026-10-02T09:00:00Z") },
+      { name: "bishop's glass", website: "bishops.example", phone: "01553 100 200", createdAt: new Date("2026-10-03T09:00:00Z") },
+      { name: "100% Thatch", website: "under_score.example", phone: null, createdAt: new Date("2026-10-04T09:00:00Z") },
+    ]);
+  });
+
+  it("with no view, or no sort, keeps newest first", async () => {
+    const newest = ["100% Thatch", "bishop's glass", "Lynn Tilers", "ACME Roofing"];
+    expect(names(await listCompanies(t.db))).toEqual(newest);
+    expect(names(await listCompanies(t.db, view({})))).toEqual(newest);
+  });
+
+  it("matches the name or website, any capitals", async () => {
+    expect(names(await listCompanies(t.db, view({ q: "acme" })))).toEqual(["Lynn Tilers", "ACME Roofing"]);
+    expect(names(await listCompanies(t.db, view({ q: "BISHOP" })))).toEqual(["bishop's glass"]);
+    expect(await listCompanies(t.db, view({ q: "nothing like it" }))).toEqual([]);
+  });
+
+  it("treats %, _ and backslash as themselves", async () => {
+    expect(names(await listCompanies(t.db, view({ q: "%" })))).toEqual(["100% Thatch"]);
+    expect(names(await listCompanies(t.db, view({ q: "_" })))).toEqual(["100% Thatch"]);
+    expect(await listCompanies(t.db, view({ q: "\\" }))).toEqual([]);
+  });
+
+  it("sorts by name ignoring capitals, both ways", async () => {
+    expect(names(await listCompanies(t.db, view({ sort: "name" }))))
+      .toEqual(["100% Thatch", "ACME Roofing", "bishop's glass", "Lynn Tilers"]);
+    expect(names(await listCompanies(t.db, view({ sort: "name", dir: "desc" }))))
+      .toEqual(["Lynn Tilers", "bishop's glass", "ACME Roofing", "100% Thatch"]);
+  });
+
+  it("puts blank websites and phones last both ways, ties by name", async () => {
+    expect(names(await listCompanies(t.db, view({ sort: "website" }))))
+      .toEqual(["bishop's glass", "100% Thatch", "Lynn Tilers", "ACME Roofing"]);
+    expect(names(await listCompanies(t.db, view({ sort: "website", dir: "desc" }))))
+      .toEqual(["Lynn Tilers", "100% Thatch", "bishop's glass", "ACME Roofing"]);
+    expect(names(await listCompanies(t.db, view({ sort: "phone" }))))
+      .toEqual(["bishop's glass", "ACME Roofing", "100% Thatch", "Lynn Tilers"]);
+    expect(names(await listCompanies(t.db, view({ sort: "phone", dir: "desc" }))))
+      .toEqual(["ACME Roofing", "bishop's glass", "100% Thatch", "Lynn Tilers"]);
+  });
+
+  it("searches and sorts together", async () => {
+    expect(names(await listCompanies(t.db, view({ q: "acme", sort: "name" })))).toEqual(["ACME Roofing", "Lynn Tilers"]);
   });
 });

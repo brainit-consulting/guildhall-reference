@@ -41,7 +41,7 @@ describe("receiveEnquiry", () => {
     }]);
     expect(deals[0].lastActivityAt).not.toBeNull();
     expect(await listActivities(t.db, { type: "deal", id: deals[0].id }))
-      .toMatchObject([{ kind: "note", body: wat.message, who: null }]);
+      .toMatchObject([{ kind: "note", body: wat.message, who: WEB_FORM }]);
     expect(enquiries).toMatchObject([{ email: "wat@lynn.example", receivedOn: "2026-10-15", dealId: deals[0].id }]);
   });
 

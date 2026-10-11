@@ -144,6 +144,8 @@ export const activity = pgTable("activity", {
   body: text("body").notNull(),
   // who logged it; kept, without a name, if that person is ever removed
   userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+  // who wrote it when no person did ("Web form" for an enquiry's note); null for anything a person logged
+  source: text("source"),
   contactId: uuid("contact_id").references(() => contact.id, { onDelete: "cascade" }),
   companyId: uuid("company_id").references(() => company.id, { onDelete: "cascade" }),
   dealId: uuid("deal_id").references(() => deal.id, { onDelete: "cascade" }),

@@ -1,6 +1,6 @@
 # 015 — Search and sort the Contacts list
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-10
 
@@ -24,23 +24,23 @@ newest first. The page reads the view from `searchParams` and uses SearchBox, So
 
 ### Task 1: Data
 
-- [ ] **Step 1:** `CONTACT_SORTS` and `listContacts(db, view?)`; integration tests for search and every sort.
+- [x] **Step 1:** `CONTACT_SORTS` and `listContacts(db, view?)`; integration tests for search and every sort.
 
 ### Task 2: Page
 
-- [ ] **Step 1:** `/contacts` uses SearchBox, SortHeading, SortBy; "No matches" with Clear search.
+- [x] **Step 1:** `/contacts` uses SearchBox, SortHeading, SortBy; "No matches" with Clear search.
 
 ### Task 3: Tests and checks
 
-- [ ] **Step 1:** `e2e/contacts-search.spec.ts`: search, sort by Company both ways, reload, phone width.
-- [ ] **Step 2:** typecheck, lint, test, test:e2e, build; tried at 390px and 1280px.
+- [x] **Step 1:** `e2e/contacts-search.spec.ts`: search, sort by Company both ways, reload, phone width.
+- [x] **Step 2:** typecheck, lint, test, test:e2e, build; tried at 390px and 1280px.
 
 ## Acceptance
 
-- [ ] Typing "acme" shows people at Acme and anyone with "acme" in their name or email; the address keeps it.
-- [ ] Company sorts both ways with no-company contacts last; reload and a copied link keep the view.
-- [ ] Search and sort combine.
-- [ ] At 390px nothing scrolls sideways and "Sort by" works.
+- [x] Typing "acme" shows people at Acme and anyone with "acme" in their name or email; the address keeps it.
+- [x] Company sorts both ways with no-company contacts last; reload and a copied link keep the view.
+- [x] Search and sort combine.
+- [x] At 390px nothing scrolls sideways and "Sort by" works.
 
 ## Risks / open questions
 

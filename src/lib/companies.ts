@@ -1,9 +1,10 @@
 // Companies (B8): the businesses contacts work for. Plain functions on `db`, so the pages and later the MCP tools
 // (get_company) share one set of rules.
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
 import { company, contact } from "@/lib/db/schema";
+import { likePattern, type ListView } from "@/lib/list-view";
 
 export type Company = typeof company.$inferSelect;
 
@@ -42,8 +43,22 @@ export function websiteHref(website: string | null): string | null {
 // Ids come from the URL or a form; anything that isn't a uuid can't be a company, and Postgres would reject it.
 const isId = (id: string) => z.uuid().safeParse(id).success;
 
-export async function listCompanies(db: Db): Promise<Company[]> {
-  return db.select().from(company).orderBy(desc(company.createdAt), desc(company.id));
+// The columns the Companies list can sort by, as they appear in the address (`?sort=website`).
+export const COMPANY_SORTS = ["name", "website", "phone"] as const;
+export type CompanySort = (typeof COMPANY_SORTS)[number];
+export type CompanyView = ListView<CompanySort>;
+
+const SORT_COLUMN = { name: company.name, website: company.website, phone: company.phone } as const;
+
+// With no view (or no sort), newest added first. A search matches the name or website, any capitals. A sort ignores
+// capitals and puts blanks last both ways; ties go by name, then id, so the order is the same on every load.
+export async function listCompanies(db: Db, view?: CompanyView): Promise<Company[]> {
+  const pattern = view?.q ? likePattern(view.q) : null;
+  const where = pattern ? or(ilike(company.name, pattern), ilike(company.website, pattern)) : undefined;
+  const query = db.select().from(company).where(where);
+  if (!view?.sort) return query.orderBy(desc(company.createdAt), desc(company.id));
+  const by = sql`lower(nullif(${SORT_COLUMN[view.sort]}, ''))`;
+  return query.orderBy(sql`${by} ${sql.raw(view.dir === "desc" ? "desc" : "asc")} nulls last`, sql`lower(${company.name})`, asc(company.id));
 }
 
 export async function getCompany(db: Db, id: string): Promise<Company | null> {

@@ -29,7 +29,7 @@ already is, so every `timestamp` column holds UTC.
 ### Task 1: Rule and dates
 
 - [x] **Step 1:** `addDays`, `daysBetween`, `dayStartIn` in dates.ts, with unit tests across both clock changes.
-- [x] **Step 2:** `cold.ts`: `COLD_DAYS`, `quietDays`, `isCold`, `coldSince`; unit tests (14, 13, never logged, Won,
+- [x] **Step 2:** `cold.ts`: `COLD_DAYS`, `quietDays`, `isCold`, `coldBefore`; unit tests (14, 13, never logged, Won,
   Lost, 1 Nov).
 
 ### Task 2: Database

@@ -31,6 +31,7 @@ One accent. Stages, statuses and charts use `ink`, `muted` and `accent` shades, 
 
 - Headings: **Young Serif** (`font-display`).
 - Everything else, including tables and forms: **IBM Plex Sans** (`font-sans`), 15px body.
+- Form fields: 16px at every width, so Safari never zooms in.
 - Numbers in tables and totals: `tabular-nums`, right-aligned.
 
 ## Layout

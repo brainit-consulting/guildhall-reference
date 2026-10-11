@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import { TIME_ZONE, todayIn } from "@/lib/dates";
 import type { SearchParams } from "@/lib/list-view";
-import { listDueTasks, listTaskTargetChoices, listTasks, readTaskDue, type TaskLine } from "@/lib/tasks";
+import { countOpenTasks, listDueTasks,listTaskTargetChoices, listTasks, readTaskDue, type TaskLine } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import { AddTaskForm } from "../_tasks/add-task-form";
 import { TaskItem } from "../_tasks/task-item";
@@ -28,15 +28,19 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   const params = await searchParams;
   const due = readTaskDue(params.due);
   const showDone = !due && params.done === "show";
-  const [tasks, choices] = await Promise.all([
+  const [tasks, choices, open] = await Promise.all([
     // today as Home works it out, so the page and Home's counts agree
     due ? listDueTasks(db, due, todayIn(TIME_ZONE, new Date())) : listTasks(db, showDone ? {} : { status: "open" }),
     listTaskTargetChoices(db),
+    countOpenTasks(db),
   ]);
 
   return (
     <main className="max-w-5xl px-6 py-12 md:px-12">
-      <h1 className="font-display text-4xl text-ink -ml-px md:-ml-6">Tasks</h1>
+      {/* every open task, whichever filter is on, so the figure doesn't change as the list does */}
+      <h1 className="font-display text-4xl text-ink -ml-px md:-ml-6">
+        Tasks{open > 0 && <> <span className="text-muted">{open}</span></>}
+      </h1>
 
       <section aria-labelledby="add-task" className="mt-8 max-w-md">
         <h2 id="add-task" className="font-display text-2xl text-ink">Add task</h2>

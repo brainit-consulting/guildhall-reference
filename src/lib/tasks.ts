@@ -1,6 +1,6 @@
 // Tasks (B12): what the business has promised someone, due on a day, on a contact, company or deal. Plain functions
 // on `db`, so the record pages, the Tasks page, Home, the B16 automations and the MCP list_tasks_due tool share them.
-import { and, asc, eq, isNotNull, isNull, lte, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, eq, isNotNull, isNull, lte, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
 import { company, contact, deal, task } from "@/lib/db/schema";
@@ -152,6 +152,12 @@ export async function listTasks(db: Db, filter: TaskFilter = {}): Promise<TaskLi
       : r.companyId ? { type: "company", id: r.companyId, name: r.companyName! }
       : { type: "deal", id: r.dealId!, name: r.dealTitle! },
   }));
+}
+
+// How many tasks are open (not done), whatever they're on or when they're due: the Tasks page heading's figure.
+export async function countOpenTasks(db: Db): Promise<number> {
+  const [row] = await db.select({ n: count() }).from(task).where(isNull(task.doneAt));
+  return row.n;
 }
 
 // Home's open tasks due by `today` (YYYY-MM-DD, the business's day): overdue oldest first, then those due today.

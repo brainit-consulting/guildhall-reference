@@ -7,7 +7,7 @@ import { createCompany, deleteCompany, EMPTY_COMPANY } from "./companies";
 import { createContact, deleteContact, EMPTY_CONTACT } from "./contacts";
 import { createDeal, deleteDeal, EMPTY_DEAL } from "./deals";
 import {
-  addTask, createTask, createTaskOn, dueTasks, listDueTasks, listTaskTargetChoices, listTasks, PICK_TARGET, setTaskDone, type TaskTarget,
+  addTask, countOpenTasks, createTask, createTaskOn, dueTasks, listDueTasks, listTaskTargetChoices, listTasks, PICK_TARGET, setTaskDone, type TaskTarget,
 } from "./tasks";
 
 let t: { db: Db; close(): Promise<void> };
@@ -255,5 +255,26 @@ describe("picking what a task is for", () => {
       expect(saved.errors?.target).toMatch(/has been deleted/);
     }
     expect(await t.db.select().from(task)).toEqual([]);
+  });
+});
+
+describe("counting open tasks", () => {
+  it("counts every open task on any record, whenever due, and drops one when it's ticked", async () => {
+    expect(await countOpenTasks(t.db)).toBe(0);
+    const on = await setUp();
+    const ids = [];
+    for (const [target, dueOn] of [[on.contact, "2020-01-01"], [on.company, "2026-10-12"], [on.deal, "2030-12-31"]] as const) {
+      ids.push((await addTask(t.db, target, { title: "Call back", dueOn })).id!);
+    }
+    expect(await countOpenTasks(t.db)).toBe(3);
+
+    await setTaskDone(t.db, ids[0], true);
+    expect(await countOpenTasks(t.db)).toBe(2);
+    await setTaskDone(t.db, ids[0], false);
+    expect(await countOpenTasks(t.db)).toBe(3);
+
+    // a deleted record takes its tasks with it
+    await deleteDeal(t.db, on.deal.id);
+    expect(await countOpenTasks(t.db)).toBe(2);
   });
 });

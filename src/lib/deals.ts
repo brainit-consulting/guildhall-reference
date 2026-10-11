@@ -172,10 +172,14 @@ export async function listedDealsTotal(db: Db, view: DealView, now = new Date())
 
 // The open deals going cold at `now`, with their company's name and value, longest quiet first (ties by title, then
 // id). Home counts and lists these; the Deals list's `cold=1` uses the same where-clause.
-export async function coldDeals(db: Db, now = new Date()): Promise<DealWithNames[]> {
-  return selectDeals(db).where(coldWhere(now))
+export async function coldDeals(db: Db, now = new Date(), limit?: number): Promise<DealWithNames[]> {
+  const query = selectDeals(db).where(coldWhere(now))
     .orderBy(sql`coalesce(${deal.lastActivityAt}, ${deal.createdAt}) asc`, sql`lower(${deal.title})`, asc(deal.id));
+  return limit === undefined ? query : query.limit(limit);
 }
+
+// How many of coldDeals Home lists; coldDealsTotal gives the "All 14 going cold" beneath them.
+export const HOME_COLD_LIMIT = 10;
 
 // How many deals are going cold at `now` and what they are worth: Home's "Going cold", the figures /deals?cold=1 shows.
 export async function coldDealsTotal(db: Db, now = new Date()): Promise<DealsTotal> {

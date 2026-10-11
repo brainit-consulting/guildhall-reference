@@ -97,7 +97,7 @@ export function readDealView(params: SearchParams): DealView {
 // isCold (src/lib/cold.ts) as a where-clause: open, and last touched (or added, when nothing was ever logged) before
 // the business's day `today - 13` began. The instant goes in as UTC text cast to timestamp, the way the columns hold
 // it, so no driver's handling of a Date can shift it.
-function coldWhere(now: Date): SQL | undefined {
+export function coldWhere(now: Date): SQL | undefined {
   return and(inArray(deal.stage, [...OPEN_STAGES]),
     sql`coalesce(${deal.lastActivityAt}, ${deal.createdAt}) < ${coldBefore(now).toISOString()}::timestamp`);
 }

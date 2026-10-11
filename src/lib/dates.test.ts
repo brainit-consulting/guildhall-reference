@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysAgo, dueWhen, formatDay, isDay, TIME_ZONE, todayIn } from "./dates";
+import { addDays, dayStartIn, daysAgo, daysBetween, dueWhen, formatDay, isDay, TIME_ZONE, todayIn } from "./dates";
 
 describe("todayIn", () => {
   it("is the calendar day in that zone, either side of its midnight", () => {
@@ -65,6 +65,43 @@ describe("isDay", () => {
     expect(isDay("2028-02-29")).toBe(true);
     for (const s of ["", "2026-02-30", "2027-02-29", "2026-13-01", "2026-10-1", "12 Oct 2026", "2026-10-12T00:00"]) {
       expect(isDay(s)).toBe(false);
+    }
+  });
+});
+
+describe("daysBetween and addDays", () => {
+  it("count and step calendar days across months, years and clock changes", () => {
+    expect(daysBetween("2026-10-01", "2026-10-15")).toBe(14);
+    expect(daysBetween("2026-10-15", "2026-10-01")).toBe(-14);
+    expect(daysBetween("2026-10-25", "2026-11-08")).toBe(14); // New York falls back on 1 Nov
+    expect(daysBetween("2025-12-31", "2026-01-01")).toBe(1);
+    expect(addDays("2026-10-15", -13)).toBe("2026-10-02");
+    expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
+    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+  });
+});
+
+describe("dayStartIn", () => {
+  it("is the instant the day's midnight comes in that zone", () => {
+    expect(dayStartIn("America/New_York", "2026-10-02").toISOString()).toBe("2026-10-02T04:00:00.000Z"); // EDT
+    expect(dayStartIn("America/New_York", "2026-12-01").toISOString()).toBe("2026-12-01T05:00:00.000Z"); // EST
+    expect(dayStartIn("UTC", "2026-10-02").toISOString()).toBe("2026-10-02T00:00:00.000Z");
+    expect(dayStartIn("Africa/Johannesburg", "2026-10-02").toISOString()).toBe("2026-10-01T22:00:00.000Z");
+    expect(dayStartIn("Pacific/Auckland", "2027-01-01").toISOString()).toBe("2026-12-31T11:00:00.000Z");
+  });
+
+  it("follows New York's clock changes on 8 Mar and 1 Nov 2026", () => {
+    expect(dayStartIn("America/New_York", "2026-03-08").toISOString()).toBe("2026-03-08T05:00:00.000Z"); // still EST
+    expect(dayStartIn("America/New_York", "2026-03-09").toISOString()).toBe("2026-03-09T04:00:00.000Z");
+    expect(dayStartIn("America/New_York", "2026-11-01").toISOString()).toBe("2026-11-01T04:00:00.000Z"); // still EDT
+    expect(dayStartIn("America/New_York", "2026-11-02").toISOString()).toBe("2026-11-02T05:00:00.000Z");
+  });
+
+  it("starts the day todayIn names", () => {
+    for (const day of ["2026-03-08", "2026-03-09", "2026-11-01", "2026-11-02", "2026-07-04"]) {
+      const start = dayStartIn(TIME_ZONE, day);
+      expect(todayIn(TIME_ZONE, start)).toBe(day);
+      expect(todayIn(TIME_ZONE, new Date(start.getTime() - 1))).toBe(addDays(day, -1));
     }
   });
 });

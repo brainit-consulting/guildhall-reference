@@ -1,6 +1,6 @@
 # 026 — A check-in task for cold deals
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-11
 
@@ -26,22 +26,22 @@ calls it before reading its figures.
 
 ### Task 1: The rule
 
-- [ ] **Step 1:** export `coldWhere` from `deals.ts` so the insert re-checks the same line.
-- [ ] **Step 2:** `cold-check-in.ts` with `checkInColdDeals`.
-- [ ] **Step 3:** `cold-check-in.integration.test.ts`: one at a time; twice; ticked; starting over after an activity;
+- [x] **Step 1:** export `coldWhere` from `deals.ts` so the insert re-checks the same line.
+- [x] **Step 2:** `cold-check-in.ts` with `checkInColdDeals`.
+- [x] **Step 3:** `cold-check-in.integration.test.ts`: one at a time; twice; ticked; starting over after an activity;
   an open check-in from an earlier spell; Promise.all; the three names; the due day near New York midnight; Won, Lost
   and recently touched deals.
 
 ### Task 2: Home
 
-- [ ] **Step 1:** Home awaits `checkInColdDeals(db, now)` before its `Promise.all`.
+- [x] **Step 1:** Home awaits `checkInColdDeals(db, now)` before its `Promise.all`.
 
 ## Acceptance
 
-- [ ] A deal quiet 15 days gets one check-in due today, shown in Home's Due today and on the deal; reloading or
+- [x] A deal quiet 15 days gets one check-in due today, shown in Home's Due today and on the deal; reloading or
   ticking it adds none.
-- [ ] After ticking it and logging a call, the deal isn't cold; 14+ days after the call it gets a new one.
-- [ ] typecheck, lint, test, test:e2e and build pass; tried in a browser with a backdated deal in `.data`.
+- [x] After ticking it and logging a call, the deal isn't cold; 14+ days after the call it gets a new one.
+- [x] typecheck, lint, test, test:e2e and build pass; tried in a browser with a backdated deal in `.data`.
 
 ## Risks / open questions
 

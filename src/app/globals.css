@@ -77,3 +77,13 @@ select option {
   background-color: var(--panel);
   color: var(--ink);
 }
+
+/* iPhone Safari zooms the page into any field whose text is under 16px, and the 15px base makes text-sm 13px:
+   below 768px every field is 16px. Outside Tailwind's layers, so it wins over the utility classes. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

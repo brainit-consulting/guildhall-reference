@@ -1,6 +1,6 @@
 # 016 — Search, sort and filter the Deals list
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-10
 
@@ -28,27 +28,27 @@ the filters are a small client file next to the page. `SortBy` learns optional p
 
 ### Task 1: Data
 
-- [ ] **Step 1:** `readDealView`, `dealWhere`, `listDeals(db, view?)`, `openDealsTotal(db, view?)`.
-- [ ] **Step 2:** Unit tests for `readDealView`; integration tests for search, each sort, stage, Open only, combined, total.
+- [x] **Step 1:** `readDealView`, `dealWhere`, `listDeals(db, view?)`, `openDealsTotal(db, view?)`.
+- [x] **Step 2:** Unit tests for `readDealView`; integration tests for search, each sort, stage, Open only, combined, total.
 
 ### Task 2: Page
 
-- [ ] **Step 1:** `SortBy` takes optional `asc`/`desc` words per column.
-- [ ] **Step 2:** `deals/deal-filters.tsx`: Stage select and Open only switch, each keeping the other parameters.
-- [ ] **Step 3:** `/deals` uses Search, headings, Sort by, filters; "No deals match" with a clear link that keeps the sort.
+- [x] **Step 1:** `SortBy` takes optional `asc`/`desc` words per column.
+- [x] **Step 2:** `deals/deal-filters.tsx`: Stage select and Open only switch, each keeping the other parameters.
+- [x] **Step 3:** `/deals` uses Search, headings, Sort by, filters; "No deals match" with a clear link that keeps the sort.
 
 ### Task 3: Tests and checks
 
-- [ ] **Step 1:** `e2e/deals-search.spec.ts`: search, stage, Open only, value both ways, reload, phone width.
-- [ ] **Step 2:** typecheck, lint, test, test:e2e, build; tried at 390px and 1280px.
+- [x] **Step 1:** `e2e/deals-search.spec.ts`: search, stage, Open only, value both ways, reload, phone width.
+- [x] **Step 2:** typecheck, lint, test, test:e2e, build; tried at 390px and 1280px.
 
 ## Acceptance
 
-- [ ] "acme" finds deals by title, company name, contact name or email.
-- [ ] Stage and Open only filter, combine with search and sort, and survive a copied link.
-- [ ] Value sorts as money both ways, blanks last; reload keeps it.
-- [ ] Open deals and Open value follow the search and filters.
-- [ ] `/pipeline` unchanged.
+- [x] "acme" finds deals by title, company name, contact name or email.
+- [x] Stage and Open only filter, combine with search and sort, and survive a copied link.
+- [x] Value sorts as money both ways, blanks last; reload keeps it.
+- [x] Open deals and Open value follow the search and filters.
+- [x] `/pipeline` unchanged.
 
 ## Risks / open questions
 

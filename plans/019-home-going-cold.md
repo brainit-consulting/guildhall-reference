@@ -16,15 +16,16 @@ Issue #37 (Beginner 14, the dashboard). Depends on #34's rule; nothing here rest
 
 ## Approach
 
-`coldDeals(db, now, limit?)` gains a limit; `homeColdDeals(db, now)` returns the first `HOME_COLD_LIMIT` (10) and the
-count from the same where-clause. Home reads both with one `now` and renders a table from 768px and stacked rows
+`coldDeals(db, now, limit?)` gains a limit. Home reads the first `HOME_COLD_LIMIT` (10) and `coldDealsTotal` (#41's
+ledger figure) with one `now`, so the ledger and "All N going cold" share one count, and renders the section after the
+due tasks and renders a table from 768px and stacked rows
 below, as the Deals list does. `quietDays` gives the number.
 
 ## Tasks
 
 ### Task 1: Data
 
-- [x] **Step 1:** `coldDeals` limit; `homeColdDeals` with count.
+- [x] **Step 1:** `coldDeals` limit; the count comes from `coldDealsTotal`.
 - [x] **Step 2:** Integration test: order, cap of 10, count of 14; a call on a 15-day deal takes it off.
 
 ### Task 2: Page

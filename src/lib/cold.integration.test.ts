@@ -8,7 +8,7 @@ import { isCold, quietDays } from "./cold";
 import { createCompany, EMPTY_COMPANY } from "./companies";
 import { addDays, dayStartIn, TIME_ZONE, todayIn } from "./dates";
 import { createContact, EMPTY_CONTACT } from "./contacts";
-import { coldDeals, getDeal, HOME_COLD_LIMIT, homeColdDeals, listDeals, moveDealStage, openDealsTotal, readDealView } from "./deals";
+import { coldDeals, coldDealsTotal, getDeal, HOME_COLD_LIMIT, listDeals, moveDealStage, openDealsTotal, readDealView } from "./deals";
 
 let t: { db: Db; close(): Promise<void> };
 beforeEach(async () => { t = await createTestDb(); });
@@ -116,14 +116,15 @@ describe("Home's Going cold", () => {
     await insert({ title: "Quiet 13 days", createdAt: ago(now, 60), lastActivityAt: ago(now, 13) });
     await insert({ title: "Won, quiet 40 days", stage: "Won", createdAt: ago(now, 40) });
 
-    const home = await homeColdDeals(t.db, now);
-    expect(home.count).toBe(16);
-    expect(home.deals).toHaveLength(HOME_COLD_LIMIT);
-    expect(home.deals.map((d) => d.title)).toEqual([
+    // what Home reads: the first 10 to list, and the count for the ledger and "All 16 going cold"
+    const listed = await coldDeals(t.db, now, HOME_COLD_LIMIT);
+    expect((await coldDealsTotal(t.db, now)).count).toBe(16);
+    expect(listed).toHaveLength(10);
+    expect(listed.map((d) => d.title)).toEqual([
       "a tied", "B tied", "Quiet 27 days", "Quiet 26 days", "Quiet 25 days",
       "Quiet 24 days", "Quiet 23 days", "Quiet 22 days", "Quiet 21 days", "Quiet 20 days",
     ]);
-    expect(home.deals.map((d) => quietDays(d, now))).toEqual([30, 30, 27, 26, 25, 24, 23, 22, 21, 20]);
+    expect(listed.map((d) => quietDays(d, now))).toEqual([30, 30, 27, 26, 25, 24, 23, 22, 21, 20]);
   });
 
   it("shows a deal quiet for 15 days as Nothing for 15 days, and a call takes it off", async () => {
@@ -132,12 +133,14 @@ describe("Home's Going cold", () => {
     const now = new Date();
     const added = new Date(dayStartIn(TIME_ZONE, addDays(todayIn(TIME_ZONE, now), -15)).getTime() + 12 * 3_600_000);
     const row = await insert({ title: "Re-roof the hall", value: "4800.00", createdAt: added });
-    const home = await homeColdDeals(t.db, now);
-    expect(home).toMatchObject({ count: 1, deals: [{ id: row.id, value: "4800.00" }] });
-    expect(quietDays(home.deals[0], now)).toBe(15);
+    const listed = await coldDeals(t.db, now, HOME_COLD_LIMIT);
+    expect(listed).toMatchObject([{ id: row.id, value: "4800.00" }]);
+    expect(quietDays(listed[0], now)).toBe(15);
+    expect((await coldDealsTotal(t.db, now)).count).toBe(1);
 
     await logActivity(t.db, { type: "deal", id: row.id }, null, { kind: "call", body: "Rang about the roof." });
-    expect(await homeColdDeals(t.db)).toEqual({ deals: [], count: 0 });
+    expect(await coldDeals(t.db, new Date(), HOME_COLD_LIMIT)).toEqual([]);
+    expect((await coldDealsTotal(t.db)).count).toBe(0);
   });
 });
 

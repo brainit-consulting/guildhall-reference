@@ -178,13 +178,21 @@ export async function coldDeals(db: Db, now = new Date(), limit?: number): Promi
   return limit === undefined ? query : query.limit(limit);
 }
 
+// How many of coldDeals Home lists; coldDealsTotal gives the "All 14 going cold" beneath them.
 export const HOME_COLD_LIMIT = 10;
 
-// Home's Going cold: the first HOME_COLD_LIMIT of coldDeals, and how many there are in all for "All 14 going cold".
-// One `now` for both, so the count and the list agree.
-export async function homeColdDeals(db: Db, now = new Date()): Promise<{ deals: DealWithNames[]; count: number }> {
-  const [deals, all] = await Promise.all([coldDeals(db, now, HOME_COLD_LIMIT), dealsTotal(db, coldWhere(now))]);
-  return { deals, count: all.count };
+// How many deals are going cold at `now` and what they are worth: Home's "Going cold", the figures /deals?cold=1 shows.
+export async function coldDealsTotal(db: Db, now = new Date()): Promise<DealsTotal> {
+  return dealsTotal(db, coldWhere(now));
+}
+
+// How many deals sit at each stage, every stage present (0 for one with none): Home's row of stages. One grouped
+// query; each count is the rows /deals?stage=<Stage> lists.
+export async function dealsPerStage(db: Db): Promise<Record<DealStage, number>> {
+  const rows = await db.select({ stage: deal.stage, count: count() }).from(deal).groupBy(deal.stage);
+  const counts = Object.fromEntries(DEAL_STAGES.map((s) => [s, 0])) as Record<DealStage, number>;
+  for (const r of rows) counts[r.stage] = r.count;
+  return counts;
 }
 
 // How many deals were won in a month (YYYY-MM) and what they are worth: Home's "Won this month". A deal won and then

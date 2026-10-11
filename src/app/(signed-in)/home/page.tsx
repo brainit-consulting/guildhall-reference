@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSession } from "@/lib/auth/session";
 import { quietDays } from "@/lib/cold";
-import { TIME_ZONE, todayIn } from "@/lib/dates";
+import { monthIn, TIME_ZONE, todayIn } from "@/lib/dates";
 import { db } from "@/lib/db/client";
-import { homeColdDeals, type DealWithNames } from "@/lib/deals";
+import {
+  coldDeals, coldDealsTotal, dealsPerStage, HOME_COLD_LIMIT, openDealsTotal, wonInMonth, type DealWithNames,
+} from "@/lib/deals";
 import { formatMoney } from "@/lib/money";
 import { dueTasks, type TaskLine } from "@/lib/tasks";
 import { TaskItem } from "../_tasks/task-item";
+import { Ledger } from "./ledger";
 
 export const metadata: Metadata = { title: "Home · Guildhall" };
 
@@ -16,23 +19,30 @@ const PATH = { contact: "/contacts", company: "/companies", deal: "/deals" } as 
 export default async function Home() {
   // Reading the session reads the request, so the page renders on every visit and today is never a cached one.
   const { user } = await requireSession();
+  // One moment for every figure, so today, this month and going cold agree with each other: the ledger's Going cold
+  // and the section's "All N going cold" read the same count.
   const now = new Date();
-  const [due, cold] = await Promise.all([dueTasks(db, todayIn(TIME_ZONE, now)), homeColdDeals(db, now)]);
+  const month = monthIn(TIME_ZONE, now);
+  const [due, open, won, stages, cold, coldList] = await Promise.all([
+    dueTasks(db, todayIn(TIME_ZONE, now)), openDealsTotal(db, undefined, now), wonInMonth(db, month), dealsPerStage(db),
+    coldDealsTotal(db, now), coldDeals(db, now, HOME_COLD_LIMIT),
+  ]);
   const nothing = due.overdue.length === 0 && due.today.length === 0;
 
   return (
     // wide enough for Going cold's four columns
     <main className="max-w-3xl px-6 py-12 md:px-12">
       <h1 className="font-display text-4xl text-ink -ml-px md:-ml-6">Welcome, {user.name}.</h1>
+      <Ledger f={{ open, won, month, stages, overdue: due.overdue.length, dueToday: due.today.length, cold: cold.count }} />
       {nothing ? (
-        <p className="mt-4 border-t border-rule pt-4 text-muted">Nothing due today.</p>
+        <p className="mt-12 border-t border-rule pt-4 text-muted">Nothing due today.</p>
       ) : (
         <>
           <Due id="overdue" heading="Overdue" tasks={due.overdue} />
           <Due id="due-today" heading="Due today" tasks={due.today} />
         </>
       )}
-      <GoingCold deals={cold.deals} count={cold.count} now={now} />
+      <GoingCold deals={coldList} count={cold.count} now={now} />
     </main>
   );
 }
@@ -86,8 +96,9 @@ function GoingCold({ deals, count, now }: { deals: DealWithNames[]; count: numbe
           <table aria-label="Deals going cold" className="mt-4 hidden w-full border-collapse text-left md:table">
             <thead>
               <tr className="border-y border-rule bg-panel text-sm text-muted">
-                <th scope="col" className="px-3 py-2 font-normal">Title</th>
-                <th scope="col" className="px-3 py-2 font-normal">Company</th>
+                {/* the title gets the larger share; a long company name wraps instead */}
+                <th scope="col" className="w-2/5 px-3 py-2 font-normal">Title</th>
+                <th scope="col" className="w-1/4 px-3 py-2 font-normal">Company</th>
                 <th scope="col" className="px-3 py-2 text-right font-normal">Value</th>
                 <th scope="col" className="px-3 py-2 font-normal">Last activity</th>
               </tr>

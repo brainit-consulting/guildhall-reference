@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { ACTIVITY_KINDS } from "../activity-kinds";
 import { DEAL_STAGES } from "../deal-stages";
+import { TASK_AUTOMATIONS } from "../task-automations";
 import { pgEnum, pgTable, text, timestamp, boolean, check, date, index, numeric, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 // ──────────────────────────────────────────────────────────────────
@@ -157,6 +158,9 @@ export const activity = pgTable("activity", {
   index("activity_deal_id").on(t.dealId, t.createdAt),
 ]);
 
+// B16: the tasks Guildhall adds itself (src/lib/task-automations.ts).
+export const taskAutomation = pgEnum("task_automation", TASK_AUTOMATIONS);
+
 // B12: something promised, due on a day, on exactly one contact, company or deal; deleted with it.
 export const task = pgTable("task", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -167,6 +171,10 @@ export const task = pgTable("task", {
   contactId: uuid("contact_id").references(() => contact.id, { onDelete: "cascade" }),
   companyId: uuid("company_id").references(() => company.id, { onDelete: "cascade" }),
   dealId: uuid("deal_id").references(() => deal.id, { onDelete: "cascade" }),
+  // B16: which automation added it; null for every task a person adds
+  automation: taskAutomation("automation"),
+  // B16: on a cold check-in only, the deal's coalesce(last_activity_at, created_at) when it was made: its cold spell
+  coldSince: timestamp("cold_since"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (t) => [
   check("task_on_one_record", sql`num_nonnulls(${t.contactId}, ${t.companyId}, ${t.dealId}) = 1`),
@@ -175,6 +183,14 @@ export const task = pgTable("task", {
   index("task_deal_id").on(t.dealId, t.dueOn),
   // the Tasks page and Home: open tasks due on or before a day
   index("task_open_due_on").on(t.dueOn).where(sql`${t.doneAt} is null`),
+  // B16: "once" is the database's job, so two tabs moving a deal to Won together still make one task. Both
+  // automations insert with on conflict do nothing against these.
+  uniqueIndex("task_one_won_follow_up").on(t.dealId).where(sql`${t.automation} = 'won_follow_up'`),
+  uniqueIndex("task_one_check_in_per_cold_spell").on(t.dealId, t.coldSince).where(sql`${t.automation} = 'cold_check_in'`),
+  // A check passes when it evaluates to null, so neither may compare a null automation with "=".
+  check("task_automation_on_deal", sql`${t.automation} is null or ${t.dealId} is not null`),
+  check("task_cold_since_on_check_in",
+    sql`(${t.automation} is not distinct from 'cold_check_in') = (${t.coldSince} is not null)`),
 ]);
 
 // B15: one row per enquiry saved from the web form, counted towards its email's daily limit. Kept when the owner

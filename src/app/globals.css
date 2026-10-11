@@ -78,14 +78,13 @@ select option {
   color: var(--ink);
 }
 
-/* iPhone Safari zooms the page into any field whose text is under 16px, and the 15px base makes text-sm 13px:
-   below 768px every field is 16px. Outside Tailwind's layers, so it wins over the utility classes. */
-@media (max-width: 767px) {
-  input,
-  select,
-  textarea {
-    font-size: 16px;
-  }
+/* Safari zooms the page into any field whose text is under 16px, and the 15px base makes text-sm 13px. Every field
+   is 16px at every width: an iPhone held sideways or an iPad is 768px or wider and zooms just the same. Outside
+   Tailwind's layers, so it wins over the utility classes. */
+input,
+select,
+textarea {
+  font-size: 16px;
 }
 
 /* Apple's touch guidelines (the mobile-web-polish skill in .claude/skills). No grey flash on tap: a pressed control

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSession } from "@/lib/auth/session";
-import { CONTACT_SORTS, listContacts, type ContactWithCompany } from "@/lib/contacts";
+import { CONTACT_SORTS, countContacts, listContacts, type ContactWithCompany } from "@/lib/contacts";
 import { db } from "@/lib/db/client";
 import { listHref, readListView, type SearchParams } from "@/lib/list-view";
 import { SearchBox } from "../_lists/search-box";
@@ -20,12 +20,15 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   await requireSession();
   const params = await searchParams;
   const view = readListView(params, CONTACT_SORTS);
-  const contacts = await listContacts(db, view);
+  const [contacts, total] = await Promise.all([listContacts(db, view), countContacts(db)]);
   const list = { path: PATH, params, view };
   return (
     <main className="max-w-4xl px-6 py-12 md:px-12">
       <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="font-display text-4xl text-ink -ml-px md:-ml-6">Contacts</h1>
+        {/* the whole book, so a search narrows the list but not the figure */}
+        <h1 className="font-display text-4xl text-ink -ml-px md:-ml-6">
+          Contacts{total > 0 && <> <span className="text-muted">{total}</span></>}
+        </h1>
         <Link href="/contacts/new" className="inline-flex h-10 items-center rounded-sm bg-accent px-4 text-sm font-medium text-paper hover:opacity-90">
           Add contact
         </Link>

@@ -1,6 +1,6 @@
 // Contacts (B7): the people the business deals with. Plain functions on `db`, so the pages and later the MCP tools
 // (add_contact, get_contact) share one set of rules.
-import { asc, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
+import { asc, count, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
 import { company, contact } from "@/lib/db/schema";
@@ -65,6 +65,12 @@ export async function listContacts(db: Db, view?: ContactView): Promise<ContactW
   if (!view?.sort) return query.orderBy(desc(contact.createdAt), desc(contact.id));
   const by = sql`lower(nullif(${SORT_COLUMN[view.sort]}, ''))`;
   return query.orderBy(sql`${by} ${sql.raw(view.dir === "desc" ? "desc" : "asc")} nulls last`, sql`lower(${contact.name})`, asc(contact.id));
+}
+
+// Every contact in the book, whatever the search: the Contacts page heading's figure.
+export async function countContacts(db: Db): Promise<number> {
+  const [row] = await db.select({ n: count() }).from(contact);
+  return row.n;
 }
 
 // What the deal form's Contact picker offers, A to Z. The company tells two people of one name apart.

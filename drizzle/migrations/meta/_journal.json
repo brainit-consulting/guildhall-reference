@@ -71,6 +71,13 @@
       "when": 1791690981044,
       "tag": "0009_puzzling_talos",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791707993443,
+      "tag": "0010_panoramic_blacklash",
+      "breakpoints": true
     }
   ]
 }

@@ -10,6 +10,7 @@ import { company, contact, deal } from "@/lib/db/schema";
 import { DEAL_STAGES, OPEN_STAGES, type DealStage } from "@/lib/deal-stages";
 import { likePattern, readListView, type ListView, type SearchParams } from "@/lib/list-view";
 import { parseMoney } from "@/lib/money";
+import { addWonFollowUp } from "@/lib/won-follow-up";
 
 export type Deal = typeof deal.$inferSelect;
 // A deal as the pages show it: with its contact's and company's names, null when it has none.
@@ -226,6 +227,7 @@ export async function createDeal(db: Db, input: DealInput, now = new Date()): Pr
   if (gone) return { id: null, errors: gone };
   const wonOn = checked.values.stage === "Won" ? todayIn(TIME_ZONE, now) : null;
   const [row] = await db.insert(deal).values({ ...checked.values, wonOn }).returning({ id: deal.id });
+  if (wonOn) await addWonFollowUp(db, row.id);
   return { id: row.id, errors: null };
 }
 
@@ -254,6 +256,11 @@ async function logStageChange(db: Db, id: string, userId: string | null, from: D
   await addActivity(db, { type: "deal", id }, userId, { kind: "stage_change", body: stageChangeText(from, to) });
 }
 
+// A move into Won adds the won follow-up (B16); saving a deal that was already at Won is not a move.
+async function afterMove(db: Db, id: string, from: DealStage, to: DealStage) {
+  if (from !== "Won" && to === "Won") await addWonFollowUp(db, id);
+}
+
 // null when there is no such deal (deleted in another tab, or a tampered id).
 export async function updateDeal(
   db: Db, id: string, input: DealInput, userId: string | null, now = new Date(),
@@ -266,6 +273,7 @@ export async function updateDeal(
   const from = await setDeal(db, id, checked.values, now);
   if (!from) return null;
   await logStageChange(db, id, userId, from, checked.values.stage);
+  await afterMove(db, id, from, checked.values.stage);
   return { id, errors: null };
 }
 
@@ -283,6 +291,7 @@ export async function moveDealStage(
   const from = await setDeal(db, id, { stage: to }, now);
   if (!from) return null; // deleted in between
   await logStageChange(db, id, userId, from, to);
+  await afterMove(db, id, from, to);
   return { from, to };
 }
 

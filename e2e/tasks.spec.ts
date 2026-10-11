@@ -131,5 +131,7 @@ test.describe("at phone width", () => {
     await addTask(page, `A very long promise without spaces ${"x".repeat(200)}`, "2026-10-12");
     const fits = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     expect(fits).toBe(true);
+    // left open, it would show on Home once overdue
+    await tick(page, `A very long promise without spaces ${"x".repeat(200)}`);
   });
 });

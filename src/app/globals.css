@@ -87,3 +87,34 @@ select option {
     font-size: 16px;
   }
 }
+
+/* Apple's touch guidelines (the mobile-web-polish skill in .claude/skills). No grey flash on tap: a pressed control
+   dims instead. On touch screens every control is at least 44px tall; desktops keep their size. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+@media (pointer: coarse) {
+  button,
+  select,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  a.inline-flex,
+  nav a {
+    min-height: 44px;
+  }
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 22px;
+    height: 22px;
+  }
+  button:active,
+  a:active {
+    opacity: 0.8;
+  }
+}
+
+/* A field's edge needs 3:1 against the page (WCAG 1.4.11); --rule is a hairline at about 1.4:1. */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  border-color: var(--muted);
+}

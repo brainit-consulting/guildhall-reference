@@ -15,7 +15,7 @@ export function AppMenu({ items }: { items: MenuItem[] }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="border-b border-rule bg-panel md:sticky md:top-0 md:flex md:h-screen md:w-56 md:shrink-0 md:flex-col md:border-r md:border-b-0">
+    <header className="border-b border-rule bg-panel md:sticky md:top-0 md:flex md:h-dvh md:overflow-y-auto md:w-56 md:shrink-0 md:flex-col md:border-r md:border-b-0">
       <div className="flex h-14 items-center justify-between gap-3 px-4 md:h-auto md:px-6 md:pt-10 md:pb-6">
         <BrandMark />
         <Button

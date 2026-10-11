@@ -30,7 +30,8 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
   // [label, value, what a blank one says]
   const fields: [string, React.ReactNode, string?][] = [
     ["Value", d.value && <span className="tabular-nums">{formatMoney(d.value)}</span>],
-    ["Stage", <StageName key="stage" stage={d.stage} />],
+    // won_on is set only at Won, so this reads "Won 3 Oct 2026"
+    ["Stage", <span key="stage"><StageName stage={d.stage} />{d.wonOn && ` ${formatDay(d.wonOn)}`}</span>],
     ["Contact", d.contactId ? <Link href={`/contacts/${d.contactId}`} className={link}>{d.contactName}</Link> : null, "No contact"],
     ["Company", d.companyId ? <Link href={`/companies/${d.companyId}`} className={link}>{d.companyName}</Link> : null, "No company"],
     ["Expected close", d.expectedClose && formatDay(d.expectedClose)],

@@ -74,7 +74,7 @@ test.describe("as the owner", () => {
       await expect(dialog).toBeVisible({ timeout: 1_000 });
     }).toPass(COLD);
     await expect(dialog).toContainText(`Delete ${company}? This can't be undone.`);
-    await expect(dialog).toContainText("Its 1 contact stays in Guildhall, with no company.");
+    await expect(dialog).toContainText("Its 1 contact stays, with no company.");
     await dialog.getByRole("button", { name: "Delete" }).click();
     await expect(page).toHaveURL(/\/companies$/, COLD);
 

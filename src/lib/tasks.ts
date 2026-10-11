@@ -22,9 +22,9 @@ export type TaskValues = { title: string; dueOn: string };
 export type TaskErrors = Partial<Record<keyof TaskInput | "target", string>>;
 
 const GONE: Record<TaskTarget["type"], string> = {
-  contact: "That contact isn't in Guildhall any more, so no task was added.",
-  company: "That company isn't in Guildhall any more, so no task was added.",
-  deal: "That deal isn't in Guildhall any more, so no task was added.",
+  contact: "That contact has been deleted, so no task was added.",
+  company: "That company has been deleted, so no task was added.",
+  deal: "That deal has been deleted, so no task was added.",
 };
 
 // Ids come from the URL or a form; anything that isn't a uuid can't be a record, and Postgres would reject it.
@@ -104,7 +104,7 @@ export async function createTaskOn(db: Db, picked: string, input: TaskInput): Pr
 
 // Ticks (done) or unticks a task. Ticking one already done keeps when it was first done.
 export async function setTaskDone(db: Db, taskId: string, done: boolean): Promise<{ error: string | null }> {
-  const gone = { error: "That task isn't in Guildhall any more." };
+  const gone = { error: "That task has been deleted." };
   if (!isId(taskId)) return gone;
   const [row] = await db.update(task)
     .set({ doneAt: done ? sql`coalesce(${task.doneAt}, now())` : null })

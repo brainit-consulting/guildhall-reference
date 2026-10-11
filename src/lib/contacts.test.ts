@@ -25,6 +25,6 @@ describe("checkContact", () => {
     const id = "6f1c2b9e-3d4a-4c5b-8e7f-0a1b2c3d4e5f";
     expect(checkContact({ ...EMPTY_CONTACT, name: "Wat Tyler", companyId: id }).values?.companyId).toBe(id);
     expect(checkContact({ ...EMPTY_CONTACT, name: "Wat Tyler", companyId: "lynn" }).errors)
-      .toEqual({ companyId: "That company isn't in Guildhall any more. Pick another, or No company." });
+      .toEqual({ companyId: "That company has been deleted. Pick another, or No company." });
   });
 });

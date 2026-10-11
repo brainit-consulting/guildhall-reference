@@ -23,7 +23,7 @@ export async function Activities({ target }: { target: ActivityTarget }) {
               <div>
                 <p className="whitespace-pre-line wrap-anywhere text-ink">{a.body}</p>
                 <p className="mt-1 text-sm text-muted">
-                  {a.who ?? "Someone no longer in Guildhall"}, <LocalDay at={a.createdAt.toISOString()} />
+                  {a.who ?? "Someone who no longer has an account"}, <LocalDay at={a.createdAt.toISOString()} />
                 </p>
               </div>
             </li>

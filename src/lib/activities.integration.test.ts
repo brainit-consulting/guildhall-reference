@@ -57,7 +57,7 @@ describe("logging an activity", () => {
     for (const type of ["contact", "company", "deal"] as const) {
       for (const id of [UNKNOWN, "not-an-id"]) {
         const result = await logActivity(t.db, { type, id }, "u1", { kind: "note", body: "Hello" });
-        expect(result).toEqual({ id: null, errors: { target: `That ${type} isn't in Guildhall any more, so nothing was logged.` } });
+        expect(result).toEqual({ id: null, errors: { target: `That ${type} has been deleted, so nothing was logged.` } });
       }
     }
     expect(await t.db.select().from(activity)).toEqual([]);

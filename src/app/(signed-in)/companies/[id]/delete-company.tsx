@@ -29,7 +29,7 @@ export function DeleteCompany({ id, name, contacts }: { id: string; name: string
         {/* the contacts are kept (the foreign key sets their company to null), and the question says so */}
         {contacts > 0 && (
           <p className="mt-3 text-sm text-ink">
-            {contacts === 1 ? "Its 1 contact stays" : `Its ${contacts} contacts stay`} in Guildhall, with no company.
+            {contacts === 1 ? "Its 1 contact stays" : `Its ${contacts} contacts stay`}, with no company.
           </p>
         )}
         <form action={deleteCompanyAction} className="mt-6 flex items-center gap-3">

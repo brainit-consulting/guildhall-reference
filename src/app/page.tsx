@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BrandLogo } from "@/components/brand-mark";
 import { getSession } from "@/lib/auth/session";
+import { BUSINESS_NAME } from "@/lib/brand";
 
 export default async function WelcomePage() {
   if (await getSession()) redirect("/home");
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center px-6">
-      <h1 className="font-display text-5xl text-ink -ml-px md:-ml-6">Guildhall</h1>
+      {/* decorative: the heading under it says the same words */}
+      <BrandLogo size={64} alt="" className="md:-ml-6" />
+      <h1 className="mt-6 font-display text-5xl break-words text-ink -ml-px md:-ml-6">{BUSINESS_NAME}</h1>
       <div className="mt-4 border-t border-rule pt-4">
-        <p className="text-lg text-ink">A CRM for your business, built by your guild.</p>
-        <p className="mt-2 text-muted">Nothing here yet: your coders build it, chapter by chapter.</p>
+        <p className="text-lg text-ink">Customers, deals and tasks for {BUSINESS_NAME}.</p>
         <div className="mt-6 flex items-center gap-4">
           <Link
             href="/signin"

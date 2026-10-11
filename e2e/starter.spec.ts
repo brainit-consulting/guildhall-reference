@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { BUSINESS_NAME } from "../src/lib/brand";
 import { allowSignUp } from "./owner";
 
 test("the welcome page shows", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Guildhall" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: BUSINESS_NAME, level: 1 })).toBeVisible();
 });
 
 test("sign-up and sign-in work on the built-in database, on this copy's own port", async ({ request, baseURL, browser }) => {

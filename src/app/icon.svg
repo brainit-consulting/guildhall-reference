@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Hollow Oak Joinery">
+  <rect width="512" height="512" fill="#8A4B2A"/>
+  <path d="M256 92c-62 0-104 44-104 98 0 30 14 52 34 66-24 10-40 32-40 58 0 36 30 62 70 62h24v44h32v-44h24c40 0 70-26 70-62 0-26-16-48-40-58 20-14 34-36 34-66 0-54-42-98-104-98z" fill="#F5F0E6"/>
+  <circle cx="256" cy="210" r="34" fill="#8A4B2A"/>
+</svg>

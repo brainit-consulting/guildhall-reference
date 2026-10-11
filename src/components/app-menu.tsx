@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { BrandMark } from "@/components/brand-mark";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Button } from "@/components/ui/button";
 import { isCurrent, type MenuItem } from "@/lib/menu";
@@ -15,12 +16,12 @@ export function AppMenu({ items }: { items: MenuItem[] }) {
 
   return (
     <header className="border-b border-rule bg-panel md:sticky md:top-0 md:flex md:h-screen md:w-56 md:shrink-0 md:flex-col md:border-r md:border-b-0">
-      <div className="flex h-14 items-center justify-between px-4 md:h-auto md:px-6 md:pt-10 md:pb-6">
-        <span className="font-display text-xl text-ink">Guildhall</span>
+      <div className="flex h-14 items-center justify-between gap-3 px-4 md:h-auto md:px-6 md:pt-10 md:pb-6">
+        <BrandMark />
         <Button
           variant="secondary"
           size="sm"
-          className="md:hidden"
+          className="shrink-0 md:hidden"
           aria-expanded={open}
           aria-controls="app-menu"
           onClick={() => setOpen((o) => !o)}

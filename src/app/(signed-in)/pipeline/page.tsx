@@ -5,7 +5,7 @@ import { db } from "@/lib/db/client";
 import { listDeals } from "@/lib/deals";
 import { Board, type Card } from "./board";
 
-export const metadata: Metadata = { title: "Pipeline · Guildhall" };
+export const metadata: Metadata = { title: "Pipeline" };
 
 export default async function PipelinePage() {
   await requireSession();

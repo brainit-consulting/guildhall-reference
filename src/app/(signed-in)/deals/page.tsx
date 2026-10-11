@@ -14,7 +14,7 @@ import { SearchBox } from "../_lists/search-box";
 import { SortBy } from "../_lists/sort-by";
 import { SortHeading } from "../_lists/sort-heading";
 
-export const metadata: Metadata = { title: "Deals · Guildhall" };
+export const metadata: Metadata = { title: "Deals" };
 
 const PATH = "/deals";
 // The phone "Sort by" names each direction in words that suit the column; the headings use only the label.

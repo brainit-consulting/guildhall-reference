@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans, Young_Serif } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { BUSINESS_NAME } from "@/lib/brand";
 
 const youngSerif = Young_Serif({
   weight: "400",
@@ -17,9 +18,11 @@ const plex = IBM_Plex_Sans({
   variable: "--font-plex",
 });
 
+// Pages give only their own part of the title. The template skips src/app/page.tsx (same segment), so the welcome
+// tab shows the default, the bare name.
 export const metadata: Metadata = {
-  title: "Guildhall",
-  description: "A CRM for your business, built by your guild.",
+  title: { default: BUSINESS_NAME, template: `%s · ${BUSINESS_NAME}` },
+  description: `Customers, deals and tasks for ${BUSINESS_NAME}.`,
 };
 
 export default function RootLayout({

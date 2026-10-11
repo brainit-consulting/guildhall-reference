@@ -15,7 +15,7 @@ import { DaysAgo } from "../../_activities/days-ago";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   await requireSession(); // the title holds the deal's name, so it is guarded like the page
   const d = await getDeal(db, (await params).id);
-  return { title: `${d?.title ?? "Deal"} · Guildhall` };
+  return { title: d?.title ?? "Deal" };
 }
 
 const link = "text-accent underline-offset-4 hover:underline";

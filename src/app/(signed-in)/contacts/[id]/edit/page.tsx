@@ -7,7 +7,7 @@ import { db } from "@/lib/db/client";
 import { updateContactAction } from "../../actions";
 import { ContactForm } from "../../contact-form";
 
-export const metadata: Metadata = { title: "Edit contact · Guildhall" };
+export const metadata: Metadata = { title: "Edit contact" };
 
 export default async function EditContactPage({ params }: { params: Promise<{ id: string }> }) {
   await requireSession();

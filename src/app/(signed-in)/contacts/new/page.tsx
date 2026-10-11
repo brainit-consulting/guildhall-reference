@@ -6,7 +6,7 @@ import { db } from "@/lib/db/client";
 import { createContactAction } from "../actions";
 import { ContactForm } from "../contact-form";
 
-export const metadata: Metadata = { title: "Add contact · Guildhall" };
+export const metadata: Metadata = { title: "Add contact" };
 
 // ?company=<id> starts the form with that company picked (the "Add contact" link on a company's page).
 export default async function NewContactPage({ searchParams }: { searchParams: Promise<{ company?: string | string[] }> }) {

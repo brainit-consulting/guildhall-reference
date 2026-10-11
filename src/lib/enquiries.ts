@@ -114,3 +114,9 @@ async function findOrAddContact(
   if (Object.keys(fill).length > 0) await db.update(contact).set({ ...fill, updatedAt: new Date() }).where(eq(contact.id, found.id));
   return { id: found.id, companyId: found.companyId ?? fill.companyId ?? null };
 }
+
+// What the visitor reads once the form is sent, saved or ignored alike, from the name they typed.
+export function thanksFor(name: string): string {
+  const who = name.trim();
+  return who ? `Thanks, ${who}. We'll be in touch.` : "Thanks. We'll be in touch.";
+}

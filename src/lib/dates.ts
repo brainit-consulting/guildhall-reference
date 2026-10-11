@@ -14,6 +14,32 @@ export function todayIn(timeZone: string, now: Date): string {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
+// The calendar month (YYYY-MM) it is at `now` in `timeZone`: the last evening of October in New York is still
+// October, though UTC is already in November.
+export function monthIn(timeZone: string, now: Date): string {
+  return todayIn(timeZone, now).slice(0, 7);
+}
+
+// A real month as YYYY-MM: "2026-13" and "2026-1" are refused.
+export function isMonth(s: string): boolean {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
+}
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+  "November", "December"];
+
+// "2026-10" reads "October 2026"; by hand, like formatDay.
+export function formatMonth(month: string): string {
+  const [year, m] = month.split("-").map(Number);
+  return `${MONTH_NAMES[m - 1]} ${year}`;
+}
+
+// The first day of the month after a YYYY-MM, as YYYY-MM-DD: "2026-12" gives "2027-01-01".
+export function nextMonthStart(month: string): string {
+  const [year, m] = month.split("-").map(Number);
+  return m === 12 ? `${year + 1}-01-01` : `${year}-${String(m + 1).padStart(2, "0")}-01`;
+}
+
 // Where a due day stands against today; both YYYY-MM-DD, which compare correctly as strings.
 export function dueWhen(dueOn: string, today: string): "overdue" | "today" | "later" {
   if (dueOn < today) return "overdue";

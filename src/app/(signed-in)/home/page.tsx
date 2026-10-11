@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSession } from "@/lib/auth/session";
 import { quietDays } from "@/lib/cold";
+import { checkInColdDeals } from "@/lib/cold-check-in";
 import { monthIn, TIME_ZONE, todayIn } from "@/lib/dates";
 import { db } from "@/lib/db/client";
 import {
@@ -23,6 +24,8 @@ export default async function Home() {
   // and the section's "All N going cold" read the same count.
   const now = new Date();
   const month = monthIn(TIME_ZONE, now);
+  // B16: today's check-ins first, so they are in Due today and its count on this same load.
+  await checkInColdDeals(db, now);
   const [due, open, won, stages, cold, coldList] = await Promise.all([
     dueTasks(db, todayIn(TIME_ZONE, now)), openDealsTotal(db, undefined, now), wonInMonth(db, month), dealsPerStage(db),
     coldDealsTotal(db, now), coldDeals(db, now, HOME_COLD_LIMIT),

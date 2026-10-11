@@ -1,5 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { checkTask, readTarget } from "./tasks";
+import { checkTask, readTarget, readTaskDue } from "./tasks";
+
+describe("readTaskDue", () => {
+  it("reads overdue and today", () => {
+    expect(readTaskDue("overdue")).toBe("overdue");
+    expect(readTaskDue("today")).toBe("today");
+    expect(readTaskDue(["today", "overdue"])).toBe("today");
+  });
+
+  it("ignores anything else", () => {
+    for (const value of [undefined, "", "junk", "Today", " today", "later", [] as string[]]) {
+      expect(readTaskDue(value)).toBeNull();
+    }
+  });
+});
 
 describe("checkTask", () => {
   it("trims the title and keeps the day", () => {

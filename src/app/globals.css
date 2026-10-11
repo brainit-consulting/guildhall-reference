@@ -25,8 +25,10 @@
   --ink: #22201C;
   --muted: #6B645A;
   --rule: #D9CFBD;
-  --accent: #1E5E57;
-  --danger: #9B2C1F;
+  /* Each mode's accent is readableShade(BRAND_COLOUR, [paper, panel]) from src/lib/colour.ts; brand-colours.test.ts
+     checks all three blocks. */
+  --accent: #8A4B2A;
+  --danger: #B91C1C;
   color-scheme: light;
 }
 
@@ -37,7 +39,7 @@
     --ink: #EDE6D8;
     --muted: #A79E8F;
     --rule: #3A352E;
-    --accent: #5FA89E;
+    --accent: #AC7F68;
     --danger: #E07A6A;
     color-scheme: dark;
   }
@@ -49,7 +51,7 @@
   --ink: #EDE6D8;
   --muted: #A79E8F;
   --rule: #3A352E;
-  --accent: #5FA89E;
+  --accent: #AC7F68;
   --danger: #E07A6A;
   color-scheme: dark;
 }

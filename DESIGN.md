@@ -18,8 +18,12 @@ Defined once in `src/app/globals.css` and used through Tailwind as `bg-paper`, `
 | `ink` | `#22201C` | `#EDE6D8` | text |
 | `muted` | `#6B645A` | `#A79E8F` | secondary text, hints, empty states |
 | `rule` | `#D9CFBD` | `#3A352E` | hairline borders and table rules |
-| `accent` | `#1E5E57` | `#5FA89E` | the one accent: links, primary buttons, the current menu item, the current stage |
-| `danger` | `#9B2C1F` | `#E07A6A` | delete buttons and error messages only |
+| `accent` | `#8A4B2A` | `#AC7F68` | the one accent: links, primary buttons, the current menu item, the current stage |
+| `danger` | `#B91C1C` | `#E07A6A` | delete buttons and error messages only |
+
+The accent comes from `BRAND_COLOUR` in `src/lib/brand.ts`, shaded (by `readableShade` in `src/lib/colour.ts`) only
+as far as 4.5:1 against that mode's paper and panel needs, and `src/lib/brand-colours.test.ts` checks it. The same
+test keeps `danger` at 4.5:1; light `danger` is a clear red, not brick, so Delete never looks like a brown accent.
 
 One accent. Stages, statuses and charts use `ink`, `muted` and `accent` shades, not a rainbow.
 

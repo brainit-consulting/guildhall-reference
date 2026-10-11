@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkEnquiry, EMPTY_ENQUIRY } from "./enquiries";
+import { checkEnquiry, EMPTY_ENQUIRY, thanksFor } from "./enquiries";
 
 const good = { ...EMPTY_ENQUIRY, name: "Wat Tyler", email: "wat@lynn.example", message: "A new roof, please." };
 
@@ -36,5 +36,15 @@ describe("checkEnquiry", () => {
       company: "Keep this under 200 characters.",
       message: "Keep this under 5,000 characters.",
     });
+  });
+});
+
+describe("thanksFor", () => {
+  it("thanks them by the name they typed, trimmed", () => {
+    expect(thanksFor("  Wat Tyler ")).toBe("Thanks, Wat Tyler. We'll be in touch.");
+  });
+
+  it("leaves the name out when there isn't one", () => {
+    expect(thanksFor(" ")).toBe("Thanks. We'll be in touch.");
   });
 });

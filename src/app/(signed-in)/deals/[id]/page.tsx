@@ -37,6 +37,8 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
     ["Expected close", d.expectedClose && formatDay(d.expectedClose)],
     // on the deal, its contact or its company
     ["Last activity", d.lastActivityAt && <DaysAgo key="last" at={d.lastActivityAt.toISOString()} now={now} />, "Nothing logged yet"],
+    // only deals that came from somewhere ("Web form"); ones added by hand show nothing new
+    ...(d.source ? [["Source", d.source] as [string, React.ReactNode]] : []),
   ];
 
   return (

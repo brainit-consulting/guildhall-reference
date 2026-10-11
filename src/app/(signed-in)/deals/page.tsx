@@ -99,6 +99,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
             {deals.map((d) => (
               <li key={d.id} className="border-b border-rule py-3">
                 <Link href={`/deals/${d.id}`} className="text-accent underline-offset-4 wrap-anywhere hover:underline">{d.title}</Link>
+                <Source d={d} />
                 {d.companyId && (
                   <p className="mt-1 text-sm text-ink wrap-anywhere">
                     <span className="text-muted">Company:</span> <CompanyLink d={d} />
@@ -128,6 +129,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
                   <tr key={d.id} className="border-b border-rule">
                     <td className="px-3 py-2">
                       <Link href={`/deals/${d.id}`} className="text-accent underline-offset-4 hover:underline">{d.title}</Link>
+                      <Source d={d} />
                     </td>
                     <td className="px-3 py-2">{d.companyId && <CompanyLink d={d} />}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink">{d.value && formatMoney(d.value)}</td>
@@ -153,6 +155,11 @@ function LastActivity({ d, now, at }: { d: DealWithNames; now: string; at: Date 
       {isCold(d, at) && <span className="ml-2 border-l border-rule pl-2 font-medium text-accent">Going cold</span>}
     </>
   );
+}
+
+// Where the deal came from ("Web form"), in words beside the title like Going cold; hand-added deals have none.
+function Source({ d }: { d: DealWithNames }) {
+  return d.source && <span className="ml-2 whitespace-nowrap border-l border-rule pl-2 text-sm font-medium text-muted">{d.source}</span>;
 }
 
 function CompanyLink({ d }: { d: DealWithNames }) {

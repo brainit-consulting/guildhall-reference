@@ -3,24 +3,34 @@ import Form from "next/form";
 import Link from "next/link";
 import { requireSession } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
-import { listTaskTargetChoices, listTasks, type TaskLine } from "@/lib/tasks";
+import { TIME_ZONE, todayIn } from "@/lib/dates";
+import type { SearchParams } from "@/lib/list-view";
+import { listDueTasks, listTaskTargetChoices, listTasks, readTaskDue, type TaskLine } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import { AddTaskForm } from "../_tasks/add-task-form";
 import { TaskItem } from "../_tasks/task-item";
 import { TaskRow } from "../_tasks/task-row";
+import { DueFilter } from "./due-filter";
 
 export const metadata: Metadata = { title: "Tasks · Guildhall" };
 
 const KIND = { contact: "Contact", company: "Company", deal: "Deal" } as const;
 const PATH = { contact: "/contacts", company: "/companies", deal: "/deals" } as const;
 
-type Search = Promise<{ done?: string | string[] }>;
+// With `due` set only open tasks show (a done task isn't due), so Show done steps aside.
+const DUE = {
+  overdue: { heading: "Overdue", empty: "Nothing overdue." },
+  today: { heading: "Due today", empty: "Nothing due today." },
+} as const;
 
-export default async function TasksPage({ searchParams }: { searchParams: Search }) {
+export default async function TasksPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   await requireSession();
-  const showDone = (await searchParams).done === "show";
+  const params = await searchParams;
+  const due = readTaskDue(params.due);
+  const showDone = !due && params.done === "show";
   const [tasks, choices] = await Promise.all([
-    listTasks(db, showDone ? {} : { status: "open" }),
+    // today as Home works it out, so the page and Home's counts agree
+    due ? listDueTasks(db, due, todayIn(TIME_ZONE, new Date())) : listTasks(db, showDone ? {} : { status: "open" }),
     listTaskTargetChoices(db),
   ]);
 
@@ -37,11 +47,21 @@ export default async function TasksPage({ searchParams }: { searchParams: Search
 
       <section aria-labelledby="task-list" className="mt-12">
         <div className="flex flex-wrap items-baseline justify-between gap-4">
-          <h2 id="task-list" className="font-display text-2xl text-ink">{showDone ? "Open and done" : "Open"}</h2>
-          <ShowDone on={showDone} />
+          <h2 id="task-list" className="font-display text-2xl text-ink">
+            {due ? DUE[due].heading : showDone ? "Open and done" : "Open"}
+          </h2>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <DueFilter params={params} due={due} />
+            {!due && <ShowDone on={showDone} />}
+          </div>
         </div>
 
-        {tasks.length === 0 ? (
+        {tasks.length === 0 && due ? (
+          <p className="mt-4 border-t border-rule pt-4 text-muted">
+            {DUE[due].empty}{" "}
+            <Link href="/tasks" className="text-accent underline-offset-4 hover:underline">See all tasks.</Link>
+          </p>
+        ) : tasks.length === 0 ? (
           <p className="mt-4 border-t border-rule pt-4 text-muted">No open tasks. Add one above, or from a contact, company or deal.</p>
         ) : (
           <>

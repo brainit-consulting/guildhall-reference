@@ -23,7 +23,7 @@ export async function addTaskAction(target: TaskTarget | null, prev: AddTaskStat
   const on = String(form.get("on") ?? "");
   const saved = target === null ? await createTaskOn(db, on, input)
     : isTarget(target) ? await createTask(db, target, input)
-    : { errors: { target: "That record isn't in Guildhall any more, so no task was added." } };
+    : { errors: { target: "That record has been deleted, so no task was added." } };
   if (saved.errors) return { errors: saved.errors, values: { ...input, on }, attempt: prev.attempt + 1 };
   refresh(); // the list is rendered by the page
   return { errors: {}, values: { title: "", dueOn: "", on: "" }, attempt: prev.attempt + 1 };

@@ -28,8 +28,8 @@ export type DealErrors = Partial<Record<keyof DealInput, string>>;
 
 export const EMPTY_DEAL: DealInput = { title: "", value: "", stage: "New", contactId: "", companyId: "", expectedClose: "" };
 
-const CONTACT_GONE = "That contact isn't in Guildhall any more. Pick another, or No contact.";
-const COMPANY_GONE = "That company isn't in Guildhall any more. Pick another, or No company.";
+const CONTACT_GONE = "That contact has been deleted. Pick another, or No contact.";
+const COMPANY_GONE = "That company has been deleted. Pick another, or No company.";
 
 const orNull = (s: string) => s.trim() || null;
 

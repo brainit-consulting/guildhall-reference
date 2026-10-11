@@ -20,7 +20,7 @@ export type ContactErrors = Partial<Record<"name" | "email" | "companyId", strin
 
 export const EMPTY_CONTACT: ContactInput = { name: "", email: "", phone: "", jobTitle: "", notes: "", companyId: "" };
 
-const COMPANY_GONE = "That company isn't in Guildhall any more. Pick another, or No company.";
+const COMPANY_GONE = "That company has been deleted. Pick another, or No company.";
 
 const orNull = (s: string) => s.trim() || null;
 

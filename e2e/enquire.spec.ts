@@ -76,7 +76,7 @@ test.describe("signed out", () => {
       await expect(source.locator("dd")).toHaveText("Web form");
       const note = owner.getByRole("list", { name: "Timeline" }).getByRole("listitem").filter({ hasText: e.message });
       await expect(note).toContainText("Web form,");
-      await expect(note).not.toContainText("Someone no longer in Guildhall");
+      await expect(note).not.toContainText("Someone who no longer has an account");
     });
   });
 

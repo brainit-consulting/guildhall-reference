@@ -107,7 +107,7 @@ describe("a contact's company", () => {
   });
 
   it("must still be there: a company deleted while the form was open is explained, and nothing is saved", async () => {
-    const gone = { companyId: "That company isn't in Guildhall any more. Pick another, or No company." };
+    const gone = { companyId: "That company has been deleted. Pick another, or No company." };
     expect(await createContact(t.db, { ...WAT, companyId: UNKNOWN })).toEqual({ id: null, errors: gone });
     expect(await listContacts(t.db)).toEqual([]);
 

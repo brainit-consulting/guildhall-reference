@@ -55,7 +55,7 @@ describe("adding a task", () => {
     for (const type of ["contact", "company", "deal"] as const) {
       for (const id of [UNKNOWN, "not-an-id"]) {
         expect(await addTask(t.db, { type, id }, { title: "Call back", dueOn: "2026-10-12" }))
-          .toEqual({ id: null, errors: { target: `That ${type} isn't in Guildhall any more, so no task was added.` } });
+          .toEqual({ id: null, errors: { target: `That ${type} has been deleted, so no task was added.` } });
       }
     }
     expect(await t.db.select().from(task)).toEqual([]);
@@ -139,7 +139,7 @@ describe("ticking a task", () => {
 
   it("says so when the task has gone", async () => {
     for (const id of [UNKNOWN, "not-an-id"]) {
-      expect(await setTaskDone(t.db, id, true)).toEqual({ error: "That task isn't in Guildhall any more." });
+      expect(await setTaskDone(t.db, id, true)).toEqual({ error: "That task has been deleted." });
     }
   });
 });
@@ -252,7 +252,7 @@ describe("picking what a task is for", () => {
     for (const picked of [`deal:${on.deal.id}`, "deal:not-an-id", `company:${UNKNOWN}`]) {
       const saved = await createTaskOn(t.db, picked, { title: "Call back", dueOn: "2026-10-12" });
       expect(saved.id).toBeNull();
-      expect(saved.errors?.target).toMatch(/isn't in Guildhall any more/);
+      expect(saved.errors?.target).toMatch(/has been deleted/);
     }
     expect(await t.db.select().from(task)).toEqual([]);
   });

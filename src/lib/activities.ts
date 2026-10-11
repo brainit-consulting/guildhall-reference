@@ -20,9 +20,9 @@ export type ActivityInput = { kind: string; body: string };
 export type ActivityErrors = Partial<Record<keyof ActivityInput | "target", string>>;
 
 const GONE: Record<ActivityTarget["type"], string> = {
-  contact: "That contact isn't in Guildhall any more, so nothing was logged.",
-  company: "That company isn't in Guildhall any more, so nothing was logged.",
-  deal: "That deal isn't in Guildhall any more, so nothing was logged.",
+  contact: "That contact has been deleted, so nothing was logged.",
+  company: "That company has been deleted, so nothing was logged.",
+  deal: "That deal has been deleted, so nothing was logged.",
 };
 
 // Ids come from the URL or a form; anything that isn't a uuid can't be a record, and Postgres would reject it.

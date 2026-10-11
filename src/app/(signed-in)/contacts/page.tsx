@@ -1,14 +1,27 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSession } from "@/lib/auth/session";
-import { listContacts, type ContactWithCompany } from "@/lib/contacts";
+import { CONTACT_SORTS, listContacts, type ContactWithCompany } from "@/lib/contacts";
 import { db } from "@/lib/db/client";
+import { listHref, readListView, type SearchParams } from "@/lib/list-view";
+import { SearchBox } from "../_lists/search-box";
+import { SortBy } from "../_lists/sort-by";
+import { SortHeading } from "../_lists/sort-heading";
 
 export const metadata: Metadata = { title: "Contacts · Guildhall" };
 
-export default async function ContactsPage() {
+const PATH = "/contacts";
+const COLUMNS = [
+  { key: "name", label: "Name" }, { key: "company", label: "Company" }, { key: "email", label: "Email" },
+  { key: "phone", label: "Phone" }, { key: "title", label: "Job title" },
+];
+
+export default async function ContactsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   await requireSession();
-  const contacts = await listContacts(db);
+  const params = await searchParams;
+  const view = readListView(params, CONTACT_SORTS);
+  const contacts = await listContacts(db, view);
+  const list = { path: PATH, params, view };
   return (
     <main className="max-w-4xl px-6 py-12 md:px-12">
       <div className="flex flex-wrap items-baseline justify-between gap-4">
@@ -18,7 +31,18 @@ export default async function ContactsPage() {
         </Link>
       </div>
 
-      {contacts.length === 0 ? (
+      {/* Kept outside the empty states, so the box keeps its focus and what is typed while the list changes. */}
+      <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
+        <div className="w-full max-w-sm"><SearchBox path={PATH} params={params} q={view.q} /></div>
+        <SortBy {...list} columns={COLUMNS} defaultLabel="Newest added first" className="w-full md:hidden" />
+      </div>
+
+      {contacts.length === 0 && view.q ? (
+        <p className="mt-8 border-t border-rule pt-6 text-muted wrap-anywhere">
+          No matches for &quot;{view.q}&quot;.{" "}
+          <Link href={listHref(PATH, params, { q: null })} className="text-accent underline-offset-4 hover:underline">Clear search</Link>
+        </p>
+      ) : contacts.length === 0 ? (
         <p className="mt-8 border-t border-rule pt-6 text-muted">
           No contacts yet. <Link href="/contacts/new" className="text-accent underline-offset-4 hover:underline">Add your first.</Link>
         </p>
@@ -48,11 +72,7 @@ export default async function ContactsPage() {
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="border-b border-rule bg-panel text-sm text-muted">
-                  <th scope="col" className="px-3 py-2 font-medium">Name</th>
-                  <th scope="col" className="px-3 py-2 font-medium">Company</th>
-                  <th scope="col" className="px-3 py-2 font-medium">Email</th>
-                  <th scope="col" className="px-3 py-2 font-medium">Phone</th>
-                  <th scope="col" className="px-3 py-2 font-medium">Job title</th>
+                  {COLUMNS.map((c) => <SortHeading key={c.key} {...list} column={c.key} label={c.label} />)}
                 </tr>
               </thead>
               <tbody>

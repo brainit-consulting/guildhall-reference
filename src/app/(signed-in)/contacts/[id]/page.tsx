@@ -11,7 +11,7 @@ import { Tasks } from "../../_tasks/tasks";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   await requireSession(); // the title holds the name, so it is guarded like the page
   const c = await getContact(db, (await params).id);
-  return { title: `${c?.name ?? "Contact"} · Guildhall` };
+  return { title: c?.name ?? "Contact" };
 }
 
 export default async function ContactPage({ params }: { params: Promise<{ id: string }> }) {

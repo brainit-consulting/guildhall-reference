@@ -6,7 +6,7 @@ import { db } from "@/lib/db/client";
 import { updateCompanyAction } from "../../actions";
 import { CompanyForm } from "../../company-form";
 
-export const metadata: Metadata = { title: "Edit company · Guildhall" };
+export const metadata: Metadata = { title: "Edit company" };
 
 export default async function EditCompanyPage({ params }: { params: Promise<{ id: string }> }) {
   await requireSession();

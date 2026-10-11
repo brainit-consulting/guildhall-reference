@@ -8,7 +8,7 @@ import { getDeal } from "@/lib/deals";
 import { updateDealAction } from "../../actions";
 import { DealForm } from "../../deal-form";
 
-export const metadata: Metadata = { title: "Edit deal · Guildhall" };
+export const metadata: Metadata = { title: "Edit deal" };
 
 export default async function EditDealPage({ params }: { params: Promise<{ id: string }> }) {
   await requireSession();

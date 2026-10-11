@@ -4,7 +4,7 @@ import { EMPTY_COMPANY } from "@/lib/companies";
 import { createCompanyAction } from "../actions";
 import { CompanyForm } from "../company-form";
 
-export const metadata: Metadata = { title: "Add company · Guildhall" };
+export const metadata: Metadata = { title: "Add company" };
 
 export default async function NewCompanyPage() {
   await requireSession();

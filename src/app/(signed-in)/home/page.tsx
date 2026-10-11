@@ -13,7 +13,7 @@ import { dueTasks, type TaskLine } from "@/lib/tasks";
 import { TaskItem } from "../_tasks/task-item";
 import { Ledger } from "./ledger";
 
-export const metadata: Metadata = { title: "Home · Guildhall" };
+export const metadata: Metadata = { title: "Home" };
 
 const PATH = { contact: "/contacts", company: "/companies", deal: "/deals" } as const;
 

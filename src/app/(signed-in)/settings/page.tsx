@@ -9,7 +9,7 @@ import { removeAllowedEmailAction } from "./actions";
 import { AllowedEmailForm } from "./allowed-email-form";
 import { CopyAddress } from "./copy-address";
 
-export const metadata: Metadata = { title: "Settings · Guildhall" };
+export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   await requireOwner();

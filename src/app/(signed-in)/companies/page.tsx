@@ -8,7 +8,7 @@ import { SearchBox } from "../_lists/search-box";
 import { SortBy } from "../_lists/sort-by";
 import { SortHeading } from "../_lists/sort-heading";
 
-export const metadata: Metadata = { title: "Companies · Guildhall" };
+export const metadata: Metadata = { title: "Companies" };
 
 const PATH = "/companies";
 const COLUMNS = [{ key: "name", label: "Name" }, { key: "website", label: "Website" }, { key: "phone", label: "Phone" }];

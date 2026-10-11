@@ -7,7 +7,7 @@ import { EMPTY_DEAL } from "@/lib/deals";
 import { createDealAction } from "../actions";
 import { DealForm } from "../deal-form";
 
-export const metadata: Metadata = { title: "Add deal · Guildhall" };
+export const metadata: Metadata = { title: "Add deal" };
 
 export default async function NewDealPage() {
   await requireSession();

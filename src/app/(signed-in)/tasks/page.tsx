@@ -12,7 +12,7 @@ import { TaskItem } from "../_tasks/task-item";
 import { TaskRow } from "../_tasks/task-row";
 import { DueFilter } from "./due-filter";
 
-export const metadata: Metadata = { title: "Tasks · Guildhall" };
+export const metadata: Metadata = { title: "Tasks" };
 
 const KIND = { contact: "Contact", company: "Company", deal: "Deal" } as const;
 const PATH = { contact: "/contacts", company: "/companies", deal: "/deals" } as const;

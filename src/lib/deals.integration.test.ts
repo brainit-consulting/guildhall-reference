@@ -6,7 +6,11 @@ import { deal, user } from "@/lib/db/schema";
 import { listActivities } from "./activities";
 import { createCompany, deleteCompany, EMPTY_COMPANY } from "./companies";
 import { createContact, deleteContact, EMPTY_CONTACT, listContactChoices } from "./contacts";
-import { createDeal, deleteDeal, EMPTY_DEAL, getDeal, listDeals, moveDealStage, openDealsTotal, readDealView, updateDeal } from "./deals";
+import { TIME_ZONE, todayIn } from "./dates";
+import {
+  createDeal, deleteDeal, EMPTY_DEAL, getDeal, listDeals, listedDealsTotal, moveDealStage, openDealsTotal, readDealView, updateDeal,
+  wonInMonth,
+} from "./deals";
 import type { SearchParams } from "./list-view";
 
 let t: { db: Db; close(): Promise<void> };
@@ -150,6 +154,100 @@ describe("stage changes", () => {
     await moveDealStage(t.db, id!, "Contacted", null);
     const [logged] = await listActivities(t.db, { type: "deal", id: id! });
     expect((await getDeal(t.db, id!))!.lastActivityAt).toEqual(logged.createdAt);
+  });
+});
+
+describe("the day a deal was won", () => {
+  // 11:30pm on 31 Oct in New York, when UTC is already in November
+  const HALLOWEEN_NIGHT = new Date("2026-11-01T03:30:00Z");
+  const NOV_3 = new Date("2026-11-03T15:00:00Z");
+  const NOV_9 = new Date("2026-11-09T15:00:00Z");
+  const wonOn = async (id: string) => (await getDeal(t.db, id))!.wonOn;
+
+  it("is the business's today for a deal added at Won, and nothing for any other stage", async () => {
+    const won = await createDeal(t.db, { ...EMPTY_DEAL, title: "Gutters", stage: "Won" }, HALLOWEEN_NIGHT);
+    const open = await createDeal(t.db, { ...EMPTY_DEAL, title: "Porch", stage: "Proposal" }, HALLOWEEN_NIGHT);
+    expect(await wonOn(won.id!)).toBe("2026-10-31");
+    expect(await wonOn(open.id!)).toBeNull();
+  });
+
+  it("is set by a move to Won on the board, cleared by a move out, and set afresh by a move back", async () => {
+    const { id } = await createDeal(t.db, { ...EMPTY_DEAL, title: "Gutters", stage: "Proposal" });
+    await moveDealStage(t.db, id!, "Won", null, HALLOWEEN_NIGHT);
+    expect(await wonOn(id!)).toBe("2026-10-31");
+    await moveDealStage(t.db, id!, "Won", null, NOV_9); // already there: nothing changes
+    expect(await wonOn(id!)).toBe("2026-10-31");
+    await moveDealStage(t.db, id!, "Proposal", null, NOV_3);
+    expect(await wonOn(id!)).toBeNull();
+    await moveDealStage(t.db, id!, "Won", null, NOV_9);
+    expect(await wonOn(id!)).toBe("2026-11-09");
+  });
+
+  it("is set by the form, kept when a Won deal is saved again, and cleared when it leaves Won", async () => {
+    const { id } = await createDeal(t.db, { ...EMPTY_DEAL, title: "Gutters" });
+    await updateDeal(t.db, id!, { ...EMPTY_DEAL, title: "Gutters" }, null, NOV_3); // edited, still New
+    expect(await wonOn(id!)).toBeNull();
+    await updateDeal(t.db, id!, { ...EMPTY_DEAL, title: "Gutters", stage: "Won" }, null, NOV_3);
+    expect(await wonOn(id!)).toBe("2026-11-03");
+    await updateDeal(t.db, id!, { ...EMPTY_DEAL, title: "Gutters and downpipes", value: "950", stage: "Won" }, null, NOV_9);
+    expect(await wonOn(id!)).toBe("2026-11-03");
+    await updateDeal(t.db, id!, { ...EMPTY_DEAL, title: "Gutters and downpipes", stage: "Lost" }, null, NOV_9);
+    expect(await wonOn(id!)).toBeNull();
+  });
+
+  it("is kept by an added-at-Won deal saved again, and untouched by a refused save", async () => {
+    const { id } = await createDeal(t.db, { ...EMPTY_DEAL, title: "Gutters", stage: "Won" }, NOV_3);
+    await updateDeal(t.db, id!, { ...EMPTY_DEAL, title: "", stage: "New" }, null, NOV_9);
+    expect(await wonOn(id!)).toBe("2026-11-03");
+    await updateDeal(t.db, id!, { ...EMPTY_DEAL, title: "Gutters", stage: "Won" }, null, NOV_9);
+    expect(await wonOn(id!)).toBe("2026-11-03");
+  });
+
+  it("defaults to the business's today", async () => {
+    const { id } = await createDeal(t.db, { ...EMPTY_DEAL, title: "Gutters" });
+    const before = todayIn(TIME_ZONE, new Date());
+    await moveDealStage(t.db, id!, "Won", null);
+    expect([before, todayIn(TIME_ZONE, new Date())]).toContain(await wonOn(id!));
+  });
+});
+
+describe("the deals won in a month", () => {
+  // Deals won on the first and last day of October, and either side of it.
+  async function season() {
+    const at = (iso: string) => new Date(iso);
+    const add = (title: string, value: string, now: Date) => createDeal(t.db, { ...EMPTY_DEAL, title, value, stage: "Won" }, now);
+    await add("Last of September", "1000", at("2026-10-01T03:30:00Z")); // 11:30pm on 30 Sep in New York
+    await add("First of October", "0.10", at("2026-10-01T04:00:00Z")); // midnight in New York
+    await add("Mid October", "", at("2026-10-15T12:00:00Z"));
+    await add("Last of October", "0.20", at("2026-11-01T03:30:00Z"));
+    await add("First of November", "500", at("2026-11-01T04:00:00Z"));
+    const lost = await add("Won then lost", "700", at("2026-10-10T12:00:00Z"));
+    await moveDealStage(t.db, lost.id!, "Lost", null);
+    await createDeal(t.db, { ...EMPTY_DEAL, title: "Still open", value: "300", stage: "Proposal" });
+  }
+
+  it("counts the deals won from the month's first day to its last and adds their values exactly", async () => {
+    await season();
+    expect(await wonInMonth(t.db, "2026-10")).toEqual({ count: 3, total: "0.30" });
+    expect(await wonInMonth(t.db, "2026-09")).toEqual({ count: 1, total: "1000.00" });
+    expect(await wonInMonth(t.db, "2026-11")).toEqual({ count: 1, total: "500.00" });
+    expect(await wonInMonth(t.db, "2026-12")).toEqual({ count: 0, total: "0" });
+  });
+
+  it("is nothing for something that isn't a month", async () => {
+    await season();
+    expect(await wonInMonth(t.db, "2026-13")).toEqual({ count: 0, total: "0" });
+    expect(await wonInMonth(t.db, "junk")).toEqual({ count: 0, total: "0" });
+  });
+
+  it("are what the list shows for won=YYYY-MM, with the same figures; junk shows every deal", async () => {
+    await season();
+    const october = readDealView({ won: "2026-10", sort: "title" });
+    expect((await listDeals(t.db, october)).map((d) => d.title)).toEqual(["First of October", "Last of October", "Mid October"]);
+    expect(await listedDealsTotal(t.db, october)).toEqual(await wonInMonth(t.db, "2026-10"));
+    expect(await listedDealsTotal(t.db, readDealView({ won: "2026-10", q: "last" }))).toEqual({ count: 1, total: "0.20" });
+    expect(await listDeals(t.db, readDealView({ won: "junk" }))).toHaveLength(7);
+    expect(await listDeals(t.db, readDealView({ won: "2026-13" }))).toHaveLength(7);
   });
 });
 

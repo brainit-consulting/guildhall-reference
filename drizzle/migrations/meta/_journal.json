@@ -64,6 +64,13 @@
       "when": 1791674853756,
       "tag": "0008_loose_power_man",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791690981044,
+      "tag": "0009_puzzling_talos",
+      "breakpoints": true
     }
   ]
 }

@@ -119,10 +119,14 @@ export const deal = pgTable("deal", {
   expectedClose: date("expected_close", { mode: "string" }),
   // B11: when an activity was last logged on the deal, its contact or its company; null until one is
   lastActivityAt: timestamp("last_activity_at"),
+  // B14: the business's calendar day the deal reached Won; null while it isn't at Won
+  wonOn: date("won_on", { mode: "string" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => [
   index("deal_created_at").on(t.createdAt),
+  // the deals won in a month
+  index("deal_won_on").on(t.wonOn),
   index("deal_by_stage").on(t.stage),
   index("deal_contact_id").on(t.contactId),
   index("deal_company_id").on(t.companyId),

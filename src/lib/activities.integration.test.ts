@@ -145,6 +145,18 @@ describe("listing a timeline", () => {
     await t.db.delete(user);
     expect(await listActivities(t.db, on.contact)).toMatchObject([{ body: "Rang", who: null }]);
   });
+
+  it("names what wrote an activity when no person did, and a person's name over it", async () => {
+    const on = await setUp();
+    await addActivity(t.db, on.deal, null, { kind: "note", body: "Sent from the site" }, "Web form");
+    await addActivity(t.db, on.deal, null, { kind: "stage_change", body: "Moved from New to Contacted" });
+    await addActivity(t.db, on.deal, "u1", { kind: "note", body: "Rang back" }, "Web form");
+    expect(await listActivities(t.db, on.deal)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ body: "Sent from the site", who: "Web form" }),
+      expect.objectContaining({ body: "Moved from New to Contacted", who: null }),
+      expect.objectContaining({ body: "Rang back", who: "Margery Kempe" }),
+    ]));
+  });
 });
 
 describe("deleting the record", () => {

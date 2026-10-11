@@ -11,7 +11,8 @@ export { ACTIVITY_KINDS, KIND_NAMES, LOGGABLE_KINDS, type ActivityKind } from "@
 // The one record an activity is about.
 export type ActivityTarget = { type: "contact" | "company" | "deal"; id: string };
 
-// An activity as the timeline shows it: who logged it by name, null when that person is no longer in Guildhall.
+// An activity as the timeline shows it: who logged it by name (or what, such as "Web form"), null when that person is
+// no longer in Guildhall.
 export type ActivityEntry = { id: string; kind: ActivityKind; body: string; createdAt: Date; who: string | null };
 
 // What the form sends, as typed.
@@ -53,14 +54,15 @@ export async function exists(db: Db, target: ActivityTarget): Promise<boolean> {
 type Saved = { id: string; errors: null } | { id: null; errors: ActivityErrors };
 
 // Writes an activity whose kind and text are already known to be good, any kind included (stage changes come from
-// moving a deal, not from the form). userId is null when nobody signed in did it.
+// moving a deal, not from the form). userId is null when nobody signed in did it; source then says what did, so the
+// timeline doesn't read it as a removed person.
 export async function addActivity(
-  db: Db, target: ActivityTarget, userId: string | null, values: { kind: ActivityKind; body: string },
+  db: Db, target: ActivityTarget, userId: string | null, values: { kind: ActivityKind; body: string }, source: string | null = null,
 ): Promise<Saved> {
   if (!(await exists(db, target))) return { id: null, errors: { target: GONE[target.type] } };
   const on = { contactId: target.type === "contact" ? target.id : null, companyId: target.type === "company" ? target.id : null,
     dealId: target.type === "deal" ? target.id : null };
-  const [row] = await db.insert(activity).values({ ...values, userId, ...on }).returning({ id: activity.id });
+  const [row] = await db.insert(activity).values({ ...values, userId, source, ...on }).returning({ id: activity.id });
   await touchDeals(db, target, row.id);
   return { id: row.id, errors: null };
 }
@@ -87,7 +89,8 @@ export async function logActivity(db: Db, target: ActivityTarget, userId: string
 // A record's timeline, newest first.
 export async function listActivities(db: Db, target: ActivityTarget): Promise<ActivityEntry[]> {
   if (!isId(target.id)) return [];
-  return db.select({ id: activity.id, kind: activity.kind, body: activity.body, createdAt: activity.createdAt, who: user.name })
+  return db.select({ id: activity.id, kind: activity.kind, body: activity.body, createdAt: activity.createdAt,
+    who: sql<string | null>`coalesce(${user.name}, ${activity.source})` })
     .from(activity).leftJoin(user, eq(activity.userId, user.id))
     .where(eq(column[target.type], target.id))
     .orderBy(desc(activity.createdAt), desc(activity.id));

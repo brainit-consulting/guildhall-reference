@@ -73,7 +73,9 @@ test.describe("signed out", () => {
       await expect(owner.getByRole("heading", { name: `Enquiry from ${e.name}`, level: 1 })).toBeVisible(COLD);
       const source = owner.locator("dl div").filter({ has: owner.locator("dt", { hasText: "Source" }) });
       await expect(source.locator("dd")).toHaveText("Web form");
-      await expect(owner.getByRole("list", { name: "Timeline" })).toContainText(e.message);
+      const note = owner.getByRole("list", { name: "Timeline" }).getByRole("listitem").filter({ hasText: e.message });
+      await expect(note).toContainText("Web form,");
+      await expect(note).not.toContainText("Someone no longer in Guildhall");
     });
   });
 

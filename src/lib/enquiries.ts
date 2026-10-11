@@ -8,7 +8,7 @@ import { normaliseEmail } from "@/lib/access";
 import { authErrorMessage, isEmail } from "@/lib/auth/messages";
 import { TIME_ZONE, todayIn } from "@/lib/dates";
 
-// What a deal made from an enquiry says it came from.
+// What a deal made from an enquiry, and its note, say they came from.
 export const WEB_FORM = "Web form";
 
 // How many enquiries one email may send in a business day; the rest are quietly ignored.
@@ -76,7 +76,7 @@ export async function receiveEnquiry(db: Db, input: EnquiryInput, now = new Date
     const [row] = await tx.insert(deal).values({
       title: `Enquiry from ${values.name}`, stage: "New", source: WEB_FORM, contactId: who.id, companyId: companyId ?? who.companyId,
     }).returning({ id: deal.id });
-    await addActivity(tx, { type: "deal", id: row.id }, null, { kind: "note", body: values.message });
+    await addActivity(tx, { type: "deal", id: row.id }, null, { kind: "note", body: values.message }, WEB_FORM);
     await tx.insert(enquiry).values({ email, receivedOn, dealId: row.id });
   });
   return { result: "saved", errors: null };

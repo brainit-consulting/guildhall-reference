@@ -3,10 +3,11 @@ import Link from "next/link";
 import { requireSession } from "@/lib/auth/session";
 import { formatDay, formatMonth } from "@/lib/dates";
 import { db } from "@/lib/db/client";
+import { isCold } from "@/lib/cold";
 import { listDeals, listedDealsTotal, openDealsTotal, readDealView, type DealWithNames } from "@/lib/deals";
 import { listHref, type SearchParams } from "@/lib/list-view";
 import { formatMoney } from "@/lib/money";
-import { OpenOnly, StageFilter } from "./deal-filters";
+import { GoingCold, OpenOnly, StageFilter } from "./deal-filters";
 import { StageName } from "./stage-name";
 import { DaysAgo } from "../_activities/days-ago";
 import { SearchBox } from "../_lists/search-box";
@@ -30,15 +31,16 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
   await requireSession();
   const params = await searchParams;
   const view = readDealView(params);
-  // the same view for both, so the figures count only the deals the table shows: the open ones, or with `won` set,
-  // every one listed (all at Won, so the open figures would read 0)
+  // the same view and moment for both, so the figures count only the deals the table shows (the open ones, or with
+  // `won` set, every one listed: all at Won, so the open figures would read 0), and the marks agree with Going cold
+  const at = new Date();
   const [deals, figures] = await Promise.all([
-    listDeals(db, view), view.won ? listedDealsTotal(db, view) : openDealsTotal(db, view),
+    listDeals(db, view, at), view.won ? listedDealsTotal(db, view, at) : openDealsTotal(db, view, at),
   ]);
   const [countLabel, valueLabel] = view.won ? ["Won deals", "Won value"] : ["Open deals", "Open value"];
-  const now = new Date().toISOString();
+  const now = at.toISOString();
   const list = { path: PATH, params, view };
-  const filtered = view.stage !== null || view.open || view.won !== null;
+  const filtered = view.stage !== null || view.open || view.cold || view.won !== null;
   return (
     <main className="max-w-5xl px-6 py-12 md:px-12">
       <div className="flex flex-wrap items-baseline justify-between gap-4">
@@ -65,6 +67,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
         <div className="w-full max-w-sm"><SearchBox path={PATH} params={params} q={view.q} /></div>
         <StageFilter path={PATH} params={params} stage={view.stage} />
         <OpenOnly path={PATH} params={params} on={view.open} />
+        <GoingCold path={PATH} params={params} on={view.cold} />
         <SortBy {...list} columns={COLUMNS} defaultLabel="Newest added first" className="w-full md:hidden" />
       </div>
 
@@ -81,7 +84,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
       {deals.length === 0 && (view.q || filtered) ? (
         <p className="mt-6 border-t border-rule pt-6 text-muted wrap-anywhere">
           {view.q ? <>No deals match &quot;{view.q}&quot;{filtered && " with these filters"}.</> : "No deals match these filters."}{" "}
-          <Link href={listHref(PATH, params, { q: null, stage: null, open: null, won: null })} className="text-accent underline-offset-4 hover:underline">
+          <Link href={listHref(PATH, params, { q: null, stage: null, open: null, cold: null, won: null })} className="text-accent underline-offset-4 hover:underline">
             {view.q && filtered ? "Clear search and filters" : view.q ? "Clear search" : "Clear filters"}
           </Link>
         </p>
@@ -108,7 +111,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
                 {d.expectedClose && (
                   <p className="mt-1 text-sm text-ink"><span className="text-muted">Expected close:</span> {formatDay(d.expectedClose)}</p>
                 )}
-                <p className="mt-1 text-sm text-ink"><span className="text-muted">Last activity:</span> <LastActivity d={d} now={now} /></p>
+                <p className="mt-1 text-sm text-ink"><span className="text-muted">Last activity:</span> <LastActivity d={d} now={now} at={at} /></p>
               </li>
             ))}
           </ul>
@@ -130,7 +133,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
                     <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink">{d.value && formatMoney(d.value)}</td>
                     <td className="px-3 py-2"><StageName stage={d.stage} /></td>
                     <td className="whitespace-nowrap px-3 py-2 text-ink">{d.expectedClose && formatDay(d.expectedClose)}</td>
-                    <td className="whitespace-nowrap px-3 py-2 text-ink"><LastActivity d={d} now={now} /></td>
+                    <td className="whitespace-nowrap px-3 py-2 text-ink"><LastActivity d={d} now={now} at={at} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -142,8 +145,14 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
   );
 }
 
-function LastActivity({ d, now }: { d: DealWithNames; now: string }) {
-  return d.lastActivityAt ? <DaysAgo at={d.lastActivityAt.toISOString()} now={now} /> : <span className="text-muted">Nothing logged</span>;
+// "Going cold" in words beside the time, not colour alone (DESIGN.md: one accent); `at` is the moment the list was read.
+function LastActivity({ d, now, at }: { d: DealWithNames; now: string; at: Date }) {
+  return (
+    <>
+      {d.lastActivityAt ? <DaysAgo at={d.lastActivityAt.toISOString()} now={now} /> : <span className="text-muted">Nothing logged</span>}
+      {isCold(d, at) && <span className="ml-2 border-l border-rule pl-2 font-medium text-accent">Going cold</span>}
+    </>
+  );
 }
 
 function CompanyLink({ d }: { d: DealWithNames }) {

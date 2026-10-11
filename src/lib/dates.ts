@@ -59,10 +59,41 @@ export function formatDay(day: string): string {
   return `${date} ${MONTHS[month - 1]} ${year}`;
 }
 
+const DAY_MS = 86_400_000;
+
+// Calendar days from one YYYY-MM-DD to another, negative when `to` is earlier. Counted at UTC midnight, where every
+// day is 24 hours long.
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS);
+}
+
+// The calendar day `n` days after `day` (before, when n is negative), both YYYY-MM-DD.
+export function addDays(day: string, n: number): string {
+  return new Date(Date.parse(`${day}T00:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10);
+}
+
+// How far `timeZone`'s clocks are ahead of UTC at `at`, in milliseconds (negative west of Greenwich).
+function offsetAt(timeZone: string, at: number): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone, hourCycle: "h23", year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric",
+  }).formatToParts(at);
+  const part = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((p) => p.type === type)!.value);
+  const wall = Date.UTC(part("year"), part("month") - 1, part("day"), part("hour"), part("minute"), part("second"));
+  return wall - Math.floor(at / 1000) * 1000;
+}
+
+// The instant `day` (YYYY-MM-DD) begins in `timeZone`. The offset is read twice, the second time at the first
+// guess, so a day whose clocks change still starts at its own midnight.
+export function dayStartIn(timeZone: string, day: string): Date {
+  const midnight = Date.parse(`${day}T00:00:00Z`);
+  const guess = midnight - offsetAt(timeZone, midnight);
+  return new Date(midnight - offsetAt(timeZone, guess));
+}
+
 // How long ago a day was, counted in calendar days: "today", "yesterday", "3 days ago". Both days are YYYY-MM-DD in
 // the reader's own time zone, so a call at 11pm reads "yesterday" the next morning, not "today".
 export function daysAgo(then: string, today: string): string {
-  const days = Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${then}T00:00:00Z`)) / 86_400_000);
+  const days = daysBetween(then, today);
   if (days <= 0) return "today"; // a clock a little ahead of the reader's
   if (days === 1) return "yesterday";
   return `${days} days ago`;

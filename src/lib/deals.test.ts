@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { checkDeal, DEAL_STAGES, EMPTY_DEAL, isOpen, readDealView, stageChangeText } from "./deals";
 
 describe("readDealView", () => {
-  it("reads the search, sort, stage and open only from the address", () => {
-    expect(readDealView({ q: " acme ", sort: "value", dir: "desc", stage: "Proposal", open: "1" }))
-      .toEqual({ q: "acme", sort: "value", dir: "desc", stage: "Proposal", open: true, won: null });
+  it("reads the search, sort, stage, open only and going cold from the address", () => {
+    expect(readDealView({ q: " acme ", sort: "value", dir: "desc", stage: "Proposal", open: "1", cold: "1" }))
+      .toEqual({ q: "acme", sort: "value", dir: "desc", stage: "Proposal", open: true, cold: true, won: null });
   });
 
   it("is the default list when there is nothing in the address", () => {
-    expect(readDealView({})).toEqual({ q: "", sort: null, dir: "asc", stage: null, open: false, won: null });
+    expect(readDealView({})).toEqual({ q: "", sort: null, dir: "asc", stage: null, open: false, cold: false, won: null });
   });
 
   it("reads the month won, and ignores anything that isn't a real month", () => {
@@ -19,7 +19,9 @@ describe("readDealView", () => {
     }
   });
 
-  it("ignores an unknown stage or sort, a lower-case stage, and open set to anything but 1", () => {
+  it("ignores an unknown stage or sort, a lower-case stage, and open or cold set to anything but 1", () => {
+    expect(readDealView({ cold: "yes" }).cold).toBe(false);
+    expect(readDealView({ cold: ["1", "0"] }).cold).toBe(true);
     expect(readDealView({ stage: "Maybe", sort: "drop", open: "yes" })).toMatchObject({ stage: null, sort: null, open: false });
     expect(readDealView({ stage: "won", open: "true" })).toMatchObject({ stage: null, open: false });
     expect(readDealView({ stage: ["Won", "Lost"], open: ["1", "0"] })).toMatchObject({ stage: "Won", open: true });

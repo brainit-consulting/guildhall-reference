@@ -14,9 +14,14 @@ export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 // folder locked.
 const open = ((globalThis as { guildhallPglite?: Map<string, PGlite> }).guildhallPglite ??= new Map());
 
+// PGlite takes the computer's time zone (standard time only: Etc/GMT+5 in New York), so `now()` would store local
+// clock times in `timestamp` columns while Drizzle writes and reads them as UTC. UTC, as Neon runs, keeps them one
+// clock. Written to the data folder's postgresql.conf, so it holds for folders made before this too.
+export const PGLITE_OPTIONS = { postgresqlconf: "timezone = 'UTC'" };
+
 export function localClient(dir: string): PGlite {
   let c = open.get(dir);
-  if (!c) open.set(dir, (c = new PGlite(dir)));
+  if (!c) open.set(dir, (c = new PGlite(dir, PGLITE_OPTIONS)));
   return c;
 }
 

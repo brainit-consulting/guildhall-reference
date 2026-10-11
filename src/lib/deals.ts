@@ -4,6 +4,7 @@ import { and, asc, count, desc, eq, getTableColumns, gte, ilike, inArray, lt, or
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
 import { addActivity } from "@/lib/activities";
+import { coldBefore } from "@/lib/cold";
 import { isDay, isMonth, nextMonthStart, TIME_ZONE, todayIn } from "@/lib/dates";
 import { company, contact, deal } from "@/lib/db/schema";
 import { DEAL_STAGES, OPEN_STAGES, type DealStage } from "@/lib/deal-stages";
@@ -74,18 +75,30 @@ function selectDeals(db: Db) {
 // The columns the Deals list can sort by, as they appear in the address (`?sort=value`).
 export const DEAL_SORTS = ["title", "company", "value", "stage", "close", "activity"] as const;
 export type DealSort = (typeof DEAL_SORTS)[number];
-// The list view plus the Deals filters: one stage (`stage=Proposal`), open deals only (`open=1`) and the deals won in
-// a month (`won=2026-10`, Home's "Won this month"; only the address sets it, there is no control for it).
-export type DealView = ListView<DealSort> & { stage: DealStage | null; open: boolean; won: string | null };
+// The list view plus the Deals filters: one stage (`stage=Proposal`), open deals only (`open=1`), deals going cold
+// (`cold=1`, which implies open) and the deals won in a month (`won=2026-10`, Home's "Won this month"; only the
+// address sets it, there is no control for it).
+export type DealView = ListView<DealSort> & { stage: DealStage | null; open: boolean; cold: boolean; won: string | null };
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
-// An unknown stage, `open` set to anything but 1, or a `won` that isn't a real month is ignored, like any other junk
-// in the address.
+// An unknown stage, `open` or `cold` set to anything but 1, or a `won` that isn't a real month is ignored, like any
+// other junk in the address.
 export function readDealView(params: SearchParams): DealView {
   const stage = DEAL_STAGES.find((s) => s === one(params.stage)) ?? null;
   const won = one(params.won);
-  return { ...readListView(params, DEAL_SORTS), stage, open: one(params.open) === "1", won: isMonth(won) ? won : null };
+  return {
+    ...readListView(params, DEAL_SORTS), stage, open: one(params.open) === "1", cold: one(params.cold) === "1",
+    won: isMonth(won) ? won : null,
+  };
+}
+
+// isCold (src/lib/cold.ts) as a where-clause: open, and last touched (or added, when nothing was ever logged) before
+// the business's day `today - 13` began. The instant goes in as UTC text cast to timestamp, the way the columns hold
+// it, so no driver's handling of a Date can shift it.
+function coldWhere(now: Date): SQL | undefined {
+  return and(inArray(deal.stage, [...OPEN_STAGES]),
+    sql`coalesce(${deal.lastActivityAt}, ${deal.createdAt}) < ${coldBefore(now).toISOString()}::timestamp`);
 }
 
 // Won in a month (YYYY-MM): on or after its 1st and before the next month's, so the index on won_on serves it.
@@ -95,12 +108,13 @@ function wonIn(month: string): SQL | undefined {
 
 // The one where-clause for the table and its figures, so they can't disagree. A search matches the title, the
 // company's name, or the contact's name or email, any capitals. Stage Won with open only matches nothing.
-function dealWhere(view: DealView): SQL | undefined {
+function dealWhere(view: DealView, now: Date): SQL | undefined {
   const pattern = view.q ? likePattern(view.q) : null;
   return and(
     pattern ? or(ilike(deal.title, pattern), ilike(company.name, pattern), ilike(contact.name, pattern), ilike(contact.email, pattern)) : undefined,
     view.stage ? eq(deal.stage, view.stage) : undefined,
     view.open ? inArray(deal.stage, [...OPEN_STAGES]) : undefined,
+    view.cold ? coldWhere(now) : undefined,
     view.won ? wonIn(view.won) : undefined,
   );
 }
@@ -117,9 +131,10 @@ const SORT_BY = {
 } as const;
 
 // With no view (or no sort), newest added first, as the pipeline board expects. A sort puts blanks last both ways;
-// ties go by title, then id, so the order is the same on every load.
-export async function listDeals(db: Db, view?: DealView): Promise<DealWithNames[]> {
-  const query = selectDeals(db).where(view && dealWhere(view));
+// ties go by title, then id, so the order is the same on every load. `now` decides which deals are going cold; pass the
+// one the page marks them with.
+export async function listDeals(db: Db, view?: DealView, now = new Date()): Promise<DealWithNames[]> {
+  const query = selectDeals(db).where(view && dealWhere(view, now));
   if (!view?.sort) return query.orderBy(desc(deal.createdAt), desc(deal.id));
   return query.orderBy(sql`${SORT_BY[view.sort]} ${sql.raw(view.dir === "desc" ? "desc" : "asc")} nulls last`,
     sql`lower(${deal.title})`, asc(deal.id));
@@ -145,13 +160,21 @@ async function dealsTotal(db: Db, where: SQL | undefined): Promise<DealsTotal> {
 }
 
 // How many deals are open and what they are worth. Given the list's view, only the open deals the table shows count.
-export async function openDealsTotal(db: Db, view?: DealView): Promise<DealsTotal> {
-  return dealsTotal(db, and(inArray(deal.stage, [...OPEN_STAGES]), view && dealWhere(view)));
+// `now` decides which deals are going cold; pass the one the list was read with.
+export async function openDealsTotal(db: Db, view?: DealView, now = new Date()): Promise<DealsTotal> {
+  return dealsTotal(db, and(inArray(deal.stage, [...OPEN_STAGES]), view && dealWhere(view, now)));
 }
 
 // Every deal the list shows, whatever its stage: the figures when the list is the deals won in a month.
-export async function listedDealsTotal(db: Db, view: DealView): Promise<DealsTotal> {
-  return dealsTotal(db, dealWhere(view));
+export async function listedDealsTotal(db: Db, view: DealView, now = new Date()): Promise<DealsTotal> {
+  return dealsTotal(db, dealWhere(view, now));
+}
+
+// The open deals going cold at `now`, with their company's name and value, longest quiet first (ties by title, then
+// id). Home counts and lists these; the Deals list's `cold=1` uses the same where-clause.
+export async function coldDeals(db: Db, now = new Date()): Promise<DealWithNames[]> {
+  return selectDeals(db).where(coldWhere(now))
+    .orderBy(sql`coalesce(${deal.lastActivityAt}, ${deal.createdAt}) asc`, sql`lower(${deal.title})`, asc(deal.id));
 }
 
 // How many deals were won in a month (YYYY-MM) and what they are worth: Home's "Won this month". A deal won and then

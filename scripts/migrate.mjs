@@ -19,7 +19,8 @@ if (target === 'skip') {
   const { migrate } = await import('drizzle-orm/pglite/migrator');
   const dir = process.env.GUILDHALL_DATA_DIR ?? '.data/pglite';
   mkdirSync(dir, { recursive: true });
-  const client = new PGlite(dir);
+  // UTC, as src/lib/db/client.ts opens it (PGLITE_OPTIONS)
+  const client = new PGlite(dir, { postgresqlconf: "timezone = 'UTC'" });
   await migrate(drizzle(client), { migrationsFolder: folder });
   await client.close();
   console.log(`Built-in database up to date (${dir}).`);

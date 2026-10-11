@@ -7,7 +7,7 @@ import { DEAL_STAGES, type DealStage } from "@/lib/deal-stages";
 import { listHref, type SearchParams } from "@/lib/list-view";
 import { cn } from "@/lib/utils";
 
-// The Deals filters, kept in the address beside the search and sort: `stage=Proposal` and `open=1`. Each is a GET
+// The Deals filters, kept in the address beside the search and sort: `stage=Proposal`, `open=1` and `cold=1`. Each is a GET
 // form carrying every other parameter, so it works before the script loads and a copied link opens the same view.
 
 // The page's parameters as hidden fields, all but the ones this form sets itself.
@@ -41,18 +41,28 @@ export function StageFilter({ path, params, stage }: { path: string; params: Sea
   );
 }
 
+type Filter = { path: string; params: SearchParams; on: boolean };
+
+export function OpenOnly(props: Filter) {
+  return <Switch {...props} name="open" label="Open only" />;
+}
+
+export function GoingCold(props: Filter) {
+  return <Switch {...props} name="cold" label="Going cold" />;
+}
+
 // A switch like "Show done" on /tasks: one button in a GET form, so Space or Enter flips it and a reload keeps it.
-export function OpenOnly({ path, params, on }: { path: string; params: SearchParams; on: boolean }) {
+function Switch({ path, params, on, name, label }: Filter & { name: string; label: string }) {
   return (
     <Form action={path} scroll={false}>
-      <Keep params={params} except="open" />
-      {!on && <input type="hidden" name="open" value="1" />}
+      <Keep params={params} except={name} />
+      {!on && <input type="hidden" name={name} value="1" />}
       <button type="submit" role="switch" aria-checked={on}
         className="inline-flex h-10 cursor-pointer items-center gap-3 text-sm text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
         <span aria-hidden className={cn("flex h-5 w-9 items-center rounded-sm border p-0.5", on ? "border-accent bg-accent" : "border-rule bg-panel")}>
           <span className={cn("size-3.5 rounded-[1px] transition-transform", on ? "translate-x-4 bg-paper" : "bg-muted")} />
         </span>
-        Open only
+        {label}
       </button>
     </Form>
   );

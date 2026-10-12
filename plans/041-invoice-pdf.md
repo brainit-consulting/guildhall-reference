@@ -1,6 +1,6 @@
 # 041 — Invoice PDF
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-12
 
@@ -41,8 +41,8 @@ attachment; the address is a new column on `business_settings`, set in Settings.
 
 ## Acceptance
 
-- [ ] The PDF opens, shows the same totals as the page, and fits one A4 page with 15 lines.
-- [ ] Tried in a browser at 375px and desktop.
+- [x] The PDF opens, shows the same totals as the page, and fits one A4 page with 15 lines.
+- [x] Tried in a browser at 375px and desktop.
 
 ## Risks / open questions
 

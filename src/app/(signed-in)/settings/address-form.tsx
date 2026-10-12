@@ -15,7 +15,7 @@ export function AddressForm({ current }: { current: string }) {
         aria-invalid={!!state.error} aria-describedby="address-hint"
         className="w-full rounded-sm border border-rule bg-panel px-3 py-2 text-sm text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" />
       <p id="address-hint" className="text-sm text-muted">
-        Printed under your business name on invoice PDFs, as you type it here: one line per line.
+        Printed under your business name on invoice PDFs, line by line as you type it.
       </p>
       <Button type="submit" disabled={pending} className="self-start">Save address</Button>
       {state.error && <p role="alert" className="border-l-2 border-danger pl-3 text-sm text-danger">{state.error}</p>}

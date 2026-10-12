@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatTaxRate, invoiceTotals, parseQuantity, parseTaxRate } from "./invoice-totals";
+import { formatQuantity, formatTaxRate, invoiceTotals, parseQuantity, parseTaxRate } from "./invoice-totals";
 
 const line = (quantity: string, unitPrice: string) => ({ quantity, unitPrice });
 
@@ -98,5 +98,14 @@ describe("formatTaxRate", () => {
     expect(formatTaxRate("7.50")).toBe("7.5%");
     expect(formatTaxRate("7.25")).toBe("7.25%");
     expect(formatTaxRate("0.00")).toBe("0%");
+  });
+});
+
+describe("formatQuantity", () => {
+  it("reads as people write it", () => {
+    expect(formatQuantity("3.00")).toBe("3");
+    expect(formatQuantity("10.00")).toBe("10");
+    expect(formatQuantity("1.50")).toBe("1.5");
+    expect(formatQuantity("0.25")).toBe("0.25");
   });
 });

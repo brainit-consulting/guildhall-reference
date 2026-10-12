@@ -78,8 +78,15 @@ export function parseTaxRate(typed: string): Parsed {
   return { value, error: null };
 }
 
+// Only zeros after the point go, so "10.00" is 10 and "1.50" is 1.5.
+const trimZeros = (value: string) => (value.includes(".") ? value.replace(/0+$/, "").replace(/\.$/, "") : value);
+
 // "15.00" reads "15%", "7.50" reads "7.5%".
 export function formatTaxRate(rate: string): string {
-  // only zeros after the point go, so "10.00" stays 10
-  return `${rate.includes(".") ? rate.replace(/0+$/, "").replace(/\.$/, "") : rate}%`;
+  return `${trimZeros(rate)}%`;
+}
+
+// A stored quantity as people write it: "3.00" reads "3", "1.50" reads "1.5".
+export function formatQuantity(quantity: string): string {
+  return trimZeros(quantity);
 }

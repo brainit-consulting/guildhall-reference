@@ -5,8 +5,10 @@ import { requireSession } from "@/lib/auth/session";
 import { getClient, listClientWonDeals } from "@/lib/clients";
 import { formatDay, TIME_ZONE, todayIn } from "@/lib/dates";
 import { db } from "@/lib/db/client";
+import { listInvoices } from "@/lib/invoices";
 import { formatMoney } from "@/lib/money";
 import { listClientProjects } from "@/lib/projects";
+import { InvoiceSection } from "../../invoices/invoice-section";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   await requireSession(); // the title holds the client's name, so it is guarded like the page
@@ -21,7 +23,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   const c = await getClient(db, id);
   if (!c) notFound();
-  const [deals, projects] = await Promise.all([listClientWonDeals(db, c.id), listClientProjects(db, c.id)]);
+  const [deals, projects, invoices] = await Promise.all([
+    listClientWonDeals(db, c.id), listClientProjects(db, c.id), listInvoices(db, { clientId: c.id }),
+  ]);
 
   // [label, value, what a blank one says]
   const fields: [string, React.ReactNode, string][] = [
@@ -69,6 +73,8 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           </ul>
         )}
       </section>
+
+      <InvoiceSection invoices={invoices} newHref={`/invoices/new?client=${c.id}`} empty="No invoices for this client yet." />
 
       <section aria-labelledby="won-deals" className="mt-12">
         <h2 id="won-deals" className="font-display text-2xl text-ink">Won deals</h2>

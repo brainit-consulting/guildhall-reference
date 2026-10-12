@@ -23,20 +23,33 @@ describe("invoiceTotals", () => {
     expect(t.total).toBe("32999999999.97");
   });
 
-  it("rounds half up, to cents, only at the end", () => {
-    // 0.33 x 0.05 = 0.0165 per line: rounded each line would be 0.02 x 3 = 0.06; exactly it is 0.0495, so 0.05
-    const t = invoiceTotals([line("0.33", "0.05"), line("0.33", "0.05"), line("0.33", "0.05")], "0.00");
-    expect(t.lines).toEqual(["0.02", "0.02", "0.02"]);
-    expect(t.subtotal).toBe("0.05");
-    // a half cent goes up
-    expect(invoiceTotals([line("0.50", "0.01")], "0.00").subtotal).toBe("0.01");
+  it("rounds each line half up to cents, and makes the subtotal the sum of the lines shown", () => {
+    // 1.5 x 45.25 = 67.875 and 0.5 x 45.25 = 22.625: both round up, and the subtotal is what they add to
+    expect(invoiceTotals([line("1.50", "45.25"), line("0.50", "45.25")], "0.00"))
+      .toEqual({ lines: ["67.88", "22.63"], subtotal: "90.51", tax: "0.00", total: "90.51" });
+    // two half cents are two cents on the page, so the subtotal is two cents too
+    expect(invoiceTotals([line("0.50", "0.01"), line("0.50", "0.01")], "0.00").subtotal).toBe("0.02");
     expect(invoiceTotals([line("0.49", "0.01")], "0.00").subtotal).toBe("0.00");
+    // QA's invoice: 3 x 120 + 1.5 x 45.25 + 0.5 x 45.25 at 15%
+    expect(invoiceTotals([line("3", "120"), line("1.5", "45.25"), line("0.5", "45.25")], "15"))
+      .toEqual({ lines: ["360.00", "67.88", "22.63"], subtotal: "450.51", tax: "67.58", total: "518.09" });
   });
 
-  it("works the tax from the exact subtotal, and the total from the figures shown", () => {
-    // subtotal 0.015 (shown 0.02), tax at 50% is 0.0075 exactly (shown 0.01): total 0.03 adds up on the page
-    const t = invoiceTotals([line("1.50", "0.01")], "50.00");
-    expect(t).toEqual({ lines: ["0.02"], subtotal: "0.02", tax: "0.01", total: "0.03" });
+  it("always prints lines that add to the subtotal, and a subtotal and tax that add to the total", () => {
+    const cents = (s: string) => Math.round(Number(s) * 100);
+    for (const q of ["0.33", "0.5", "1.25", "2.75", "7"]) {
+      for (const p of ["0.01", "0.05", "19.99", "45.25", "1234.57"]) {
+        const t = invoiceTotals([line(q, p), line(p.replace(/^\d+/, "1"), q), line("0.5", p)], "7.25");
+        expect(t.lines.reduce((sum, l) => sum + cents(l), 0)).toBe(cents(t.subtotal));
+        expect(cents(t.subtotal) + cents(t.tax)).toBe(cents(t.total));
+      }
+    }
+  });
+
+  it("rounds the tax once, from the subtotal", () => {
+    // 50% of 0.03 is 0.015: 0.02
+    expect(invoiceTotals([line("1.50", "0.01"), line("1", "0.01")], "50.00"))
+      .toEqual({ lines: ["0.02", "0.01"], subtotal: "0.03", tax: "0.02", total: "0.05" });
     // 7.25% of 19.99 is 1.449275: 1.45
     expect(invoiceTotals([line("1", "19.99")], "7.25")).toEqual({ lines: ["19.99"], subtotal: "19.99", tax: "1.45", total: "21.44" });
   });

@@ -13,35 +13,32 @@ function scaled(value: string, places: number): bigint {
   return BigInt(match[1] + (match[2] ?? "").padEnd(places, "0"));
 }
 
-// A non-negative value held at 10^-places to cents, half up (0.005 is 0.01), as "1234.56".
-function toCents(value: bigint, places: number): string {
+// A non-negative value held at 10^-places, in whole cents, half up (0.005 is 0.01).
+function roundCents(value: bigint, places: number): bigint {
   const unit = 10n ** BigInt(places - 2);
-  const cents = (value + unit / 2n) / unit;
-  return centsText(cents);
+  return (value + unit / 2n) / unit;
 }
 
 function centsText(cents: bigint): string {
   return `${cents / 100n}.${String(cents % 100n).padStart(2, "0")}`;
 }
 
-// Each line is quantity x unit price; tax is the subtotal x the rate (a percentage). Every figure is worked exactly
-// and rounded to cents once, at the end: a line from its exact amount, the subtotal from the exact sum of the lines,
-// the tax from the exact subtotal. The total is the rounded subtotal plus the rounded tax, so the figures printed on
-// the invoice always add up.
+// Each line is quantity x unit price; tax is the subtotal x the rate (a percentage). Every product is worked
+// exactly and rounded to cents once: a line from its exact quantity x price, the tax from the subtotal. The subtotal
+// is the sum of the rounded lines and the total the subtotal plus the rounded tax, so every figure printed on the
+// invoice adds up: the lines to the subtotal, the subtotal and tax to the total.
 export function invoiceTotals(lines: readonly TotalsLine[], taxRate: string): InvoiceTotals {
   const rate = scaled(taxRate, 2); // 15.00% is 1500n
-  // quantity (2 places) x price (2 places): 4 places
-  const exact = lines.map((l) => scaled(l.quantity, 2) * scaled(l.unitPrice, 2));
-  const subtotal = exact.reduce((sum, a) => sum + a, 0n);
-  // subtotal (4 places) x rate (2 places) / 100 for the percentage: 8 places
-  const tax = subtotal * rate;
-  const subtotalText = toCents(subtotal, 4);
-  const taxText = toCents(tax, 8);
+  // quantity (2 places) x price (2 places) is 4 places; rounded to cents
+  const lineCents = lines.map((l) => roundCents(scaled(l.quantity, 2) * scaled(l.unitPrice, 2), 4));
+  const subtotal = lineCents.reduce((sum, c) => sum + c, 0n);
+  // subtotal (2 places) x rate (2 places) / 100 for the percentage: 6 places
+  const tax = roundCents(subtotal * rate, 6);
   return {
-    lines: exact.map((a) => toCents(a, 4)),
-    subtotal: subtotalText,
-    tax: taxText,
-    total: centsText(scaled(subtotalText, 2) + scaled(taxText, 2)),
+    lines: lineCents.map(centsText),
+    subtotal: centsText(subtotal),
+    tax: centsText(tax),
+    total: centsText(subtotal + tax),
   };
 }
 

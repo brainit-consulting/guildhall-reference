@@ -19,7 +19,7 @@ these functions.
 
 Numbers come from a Postgres sequence, which never hands out a number twice, whatever is deleted or rolled back. A
 one-row `business_settings` table holds the tax rate. `invoiceTotals` works in whole integers (BigInt) from the decimal
-strings and rounds half up to cents once per figure. `src/lib/invoices.ts` holds the reads, writes and the status rule
+strings: each line and the tax are rounded half up to cents once, from their exact products. `src/lib/invoices.ts` holds the reads, writes and the status rule
 (Draft to Sent to Paid; only a Draft is edited or deleted), each guarded in the `where` so a stale page can't skip it.
 
 ## Tasks
@@ -46,8 +46,10 @@ strings and rounds half up to cents once per figure. `src/lib/invoices.ts` holds
 
 ## Risks / open questions
 
-- Rounding: each line, the subtotal and the tax are rounded half up from exact values; the total is the rounded
-  subtotal plus the rounded tax, so the printed figures always add up.
+- Rounding: each line is rounded half up from its exact quantity x price; the subtotal is the sum of those rounded
+  lines; the tax is worked exactly from the subtotal and rounded once; the total is subtotal plus tax. The lines add
+  to the subtotal and the subtotal and tax to the total, as printed. (QA round 1: the first version took the
+  subtotal from the exact sum, so the printed lines could differ from it by a cent.)
 - Status moves one way, one step at a time: Draft to Sent, Sent to Paid. No undo.
 - Deleting a project leaves its invoices, without the project. A client with invoices can't be deleted (no page
   deletes clients; demo reset deletes invoices first).

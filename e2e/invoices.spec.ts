@@ -65,21 +65,21 @@ test.describe("as the owner", () => {
     await page.getByLabel("Issue date").fill("2026-10-12");
     await page.getByLabel("Due date").fill("2026-11-11");
 
-    // three lines; the totals follow what is typed
+    // three lines, two of them a half cent (67.875, 22.625): each rounds up and the subtotal is what the lines add to
     const line = (n: number) => page.getByRole("listitem", { name: `Line ${n}` });
     await expect(async () => {
       if (await line(3).count() === 0) await page.getByRole("button", { name: "Add line" }).click();
       await expect(line(3)).toBeVisible({ timeout: 1_000 });
     }).toPass(COLD);
-    const rows = [["Oak shelves", "3", "120"], ["Fitting, hours", "1.5", "85"], ["Brass brackets", "1", "42.50"]];
+    const rows = [["Oak shelves", "3", "120"], ["Fitting, hours", "1.5", "45.25"], ["Finishing, hours", "0.5", "45.25"]];
     for (const [i, [description, quantity, price]] of rows.entries()) {
       await line(i + 1).getByLabel("Description").fill(description);
       await line(i + 1).getByLabel("Quantity").fill(quantity);
       await line(i + 1).getByLabel("Unit price (USD)").fill(price);
     }
-    await expect(page.getByRole("status", { name: "Line 2 amount" })).toHaveText("$127.50");
+    await expect(page.getByRole("status", { name: "Line 2 amount" })).toHaveText("$67.88");
     const totals = page.getByRole("definition");
-    await expect(totals).toHaveText(["$530.00", "$79.50", "$609.50"]);
+    await expect(totals).toHaveText(["$450.51", "$67.58", "$518.09"]);
     await page.getByRole("button", { name: "Save draft" }).click();
 
     // the invoice's page
@@ -90,22 +90,22 @@ test.describe("as the owner", () => {
     await expect(page.getByRole("definition").nth(2)).toHaveText("Draft");
     const lines = page.getByRole("table", { name: "Lines" }).getByRole("row");
     await expect(lines.nth(1).getByRole("cell")).toHaveText(["Oak shelves", "3", "$120.00", "$360.00"]);
-    await expect(lines.nth(2).getByRole("cell")).toHaveText(["Fitting, hours", "1.5", "$85.00", "$127.50"]);
-    await expect(lines.nth(3).getByRole("cell")).toHaveText(["Brass brackets", "1", "$42.50", "$42.50"]);
-    await expect(page.getByLabel("Totals").getByRole("definition")).toHaveText(["$530.00", "$79.50", "$609.50"]);
+    await expect(lines.nth(2).getByRole("cell")).toHaveText(["Fitting, hours", "1.5", "$45.25", "$67.88"]);
+    await expect(lines.nth(3).getByRole("cell")).toHaveText(["Finishing, hours", "0.5", "$45.25", "$22.63"]);
+    await expect(page.getByLabel("Totals").getByRole("definition")).toHaveText(["$450.51", "$67.58", "$518.09"]);
     await expect(page.getByLabel("Totals").getByRole("term").nth(1)).toHaveText("Tax (15%)");
 
     // a later change to the tax rate leaves this invoice's alone
     await setTaxRate(page, "20");
     await page.goto(invoicePath);
-    await expect(page.getByLabel("Totals").getByRole("definition")).toHaveText(["$530.00", "$79.50", "$609.50"], COLD);
+    await expect(page.getByLabel("Totals").getByRole("definition")).toHaveText(["$450.51", "$67.58", "$518.09"], COLD);
 
     // on /invoices, opened from the menu
     await page.goto("/home");
     await menu(page).getByRole("link", { name: "Invoices" }).click();
     await expect(page.getByRole("heading", { name: "Invoices", level: 1 })).toBeVisible(COLD);
     const row = page.getByRole("table", { name: "Invoices" }).getByRole("row").filter({ hasText: number });
-    await expect(row.getByRole("cell")).toHaveText([number, company, "$609.50", "Draft", "11 Nov 2026"]);
+    await expect(row.getByRole("cell")).toHaveText([number, company, "$518.09", "Draft", "11 Nov 2026"]);
 
     // Mark sent: Edit and Delete go
     await page.goto(invoicePath);
@@ -125,7 +125,7 @@ test.describe("as the owner", () => {
     await expect(listed).toHaveCount(1, COLD);
     await expect(listed).toContainText(number);
     await expect(listed).toContainText("Paid · due 11 Nov 2026");
-    await expect(listed).toContainText("$609.50");
+    await expect(listed).toContainText("$518.09");
 
     // so other tests' figures stay as they were. A paid invoice can't be deleted, so the client stays; the deal goes.
     await setTaxRate(page, "0");
@@ -173,6 +173,8 @@ test.describe("as the owner", () => {
     // Edit
     await page.getByRole("link", { name: "Edit" }).click();
     await expect(page.getByRole("heading", { name: `Edit ${number}`, level: 1 })).toBeVisible(COLD);
+    // the stored quantity shows as typed, not "1.00"
+    await expect(page.getByRole("listitem", { name: "Line 1" }).getByLabel("Quantity")).toHaveValue("1");
     await expect(async () => {
       await page.getByRole("listitem", { name: "Line 1" }).getByLabel("Unit price (USD)").fill("950");
       await expect(page.getByLabel("Totals").getByRole("definition").first()).toHaveText("$950.00", { timeout: 1_000 });

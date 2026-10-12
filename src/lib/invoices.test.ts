@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  checkInvoice, DUE_BEFORE_ISSUE, formatInvoiceNumber, isOverdue, MAX_LINES, NO_LINES, PICK_CLIENT, type InvoiceInput,
+  checkInvoice, DUE_BEFORE_ISSUE, formatInvoiceNumber, invoicePdfFileName, isOverdue, MAX_LINES, NO_LINES, PICK_CLIENT, type InvoiceInput,
 } from "./invoices";
 
 const CLIENT = "6f1c2a3e-1d2b-4c5d-8e9f-0a1b2c3d4e5f";
@@ -14,6 +14,14 @@ describe("formatInvoiceNumber", () => {
     expect(formatInvoiceNumber(1)).toBe("INV-0001");
     expect(formatInvoiceNumber(42)).toBe("INV-0042");
     expect(formatInvoiceNumber(10000)).toBe("INV-10000");
+  });
+});
+
+describe("invoicePdfFileName", () => {
+  it("is the invoice number with .pdf", () => {
+    expect(invoicePdfFileName(1)).toBe("INV-0001.pdf");
+    expect(invoicePdfFileName(123)).toBe("INV-0123.pdf");
+    expect(invoicePdfFileName(10000)).toBe("INV-10000.pdf");
   });
 });
 

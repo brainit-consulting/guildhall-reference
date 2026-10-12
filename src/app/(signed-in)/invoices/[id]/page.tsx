@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/auth/session";
 import { formatDay, TIME_ZONE, todayIn } from "@/lib/dates";
 import { db } from "@/lib/db/client";
 import { formatQuantity, formatTaxRate } from "@/lib/invoice-totals";
-import { formatInvoiceNumber, getInvoice, isOverdue, NEXT_STATUS } from "@/lib/invoices";
+import { formatInvoiceNumber, getInvoice, invoicePdfFileName, isOverdue, NEXT_STATUS } from "@/lib/invoices";
 import { formatMoney } from "@/lib/money";
 import { StatusText } from "../status-text";
 import { Advance } from "./advance";
@@ -106,6 +106,11 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             Edit
           </Link>
         )}
+        {/* a plain link: the route answers with the file, so the browser saves it without leaving the page */}
+        <a href={`/invoices/${i.id}/pdf`} download={invoicePdfFileName(i.number)}
+          className="inline-flex h-10 items-center rounded-sm border border-rule bg-panel px-4 text-sm font-medium text-ink hover:border-ink tap-target">
+          Download PDF
+        </a>
         {(next === "Sent" || next === "Paid") && <Advance id={i.id} to={next} />}
         {i.status === "Draft" && <DeleteInvoice id={i.id} name={number} />}
       </div>

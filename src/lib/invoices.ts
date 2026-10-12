@@ -21,6 +21,11 @@ export function formatInvoiceNumber(n: number): string {
   return `INV-${String(n).padStart(4, "0")}`;
 }
 
+// The PDF saves as "INV-0001.pdf": the number the client quotes back is the name they file it under.
+export function invoicePdfFileName(n: number): string {
+  return `${formatInvoiceNumber(n)}.pdf`;
+}
+
 // Overdue: sent, not paid, and its due day has gone by. A Draft isn't owed yet; a Paid one isn't owed at all. Both
 // days are YYYY-MM-DD, which compare correctly as text.
 export function isOverdue(i: { status: InvoiceStatus; dueOn: string }, today: string): boolean {

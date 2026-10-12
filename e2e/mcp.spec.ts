@@ -1,25 +1,26 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-// An agent's view of /mcp on the running app: no sign-in yet (I5), so only this computer can reach it.
-async function rpc(request: APIRequestContext, method: string, params: object) {
+// An agent's first look at /mcp on the running app (I5): no token, so a 401 pointing at where to sign in, and the
+// discovery addresses that tell it how.
+test("/mcp without a token answers 401 with the protected-resource address", async ({ request, baseURL }) => {
   const res = await request.post("/mcp", {
     headers: { accept: "application/json, text/event-stream" },
-    data: { jsonrpc: "2.0", id: 1, method, params },
+    data: { jsonrpc: "2.0", id: 1, method: "tools/list", params: {} },
     timeout: 60_000,
   });
-  expect(res.status()).toBe(200);
-  const text = await res.text();
-  const json = text.trimStart().startsWith("{") ? text : /^data: (.*)$/m.exec(text)![1];
-  return JSON.parse(json).result;
-}
+  expect(res.status()).toBe(401);
+  expect(res.headers()["www-authenticate"]).toContain(`resource_metadata="${baseURL}/.well-known/oauth-protected-resource/mcp"`);
+});
 
-test("an agent lists the six read tools and reads the pipeline", async ({ request }) => {
-  const { tools } = await rpc(request, "tools/list", {});
-  expect(tools.map((t: { name: string }) => t.name).sort()).toEqual([
-    "get_company", "get_contact", "get_deal", "list_pipeline", "list_tasks_due", "search_contacts",
-  ]);
-
-  const result = await rpc(request, "tools/call", { name: "list_pipeline", arguments: {} });
-  const stages = JSON.parse(result.content[0].text);
-  expect(stages.map((s: { stage: string }) => s.stage)).toEqual(["New", "Contacted", "Proposal", "Won", "Lost"]);
+test("the discovery addresses answer JSON", async ({ request, baseURL }) => {
+  for (const path of [
+    "/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp",
+    "/.well-known/oauth-authorization-server", "/.well-known/oauth-authorization-server/api/auth",
+    "/.well-known/openid-configuration", "/api/auth/.well-known/openid-configuration",
+  ]) {
+    const res = await request.get(path, { timeout: 60_000 });
+    expect(res.status(), path).toBe(200);
+    const body = await res.json();
+    expect(body.resource ?? body.issuer, path).toContain(baseURL!);
+  }
 });

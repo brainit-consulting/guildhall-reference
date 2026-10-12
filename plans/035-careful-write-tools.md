@@ -1,6 +1,6 @@
 # 035 — Careful write tools
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-12
 
@@ -26,21 +26,21 @@ a read-only one learns why it can't use them.
 
 ### Task 1: The tools
 
-- [ ] **Step 1:** `addContact`: name, email, phone, job title, company (found by name, any capitals, or added);
+- [x] **Step 1:** `addContact`: name, email, phone, job title, company (found by name, any capitals, or added);
   refuses an email another contact has (any capitals), naming that contact.
-- [ ] **Step 2:** `logActivityOn`: note, call or meeting on a contact, company or deal by ID.
-- [ ] **Step 3:** `moveDeal`: moves and logs as the board does.
-- [ ] **Step 4:** Integration tests on `createTestDb()`, including the refusal without the scope and the duplicate.
+- [x] **Step 2:** `logActivityOn`: note, call or meeting on a contact, company or deal by ID.
+- [x] **Step 3:** `moveDeal`: moves and logs as the board does.
+- [x] **Step 4:** Integration tests on `createTestDb()`, including the refusal without the scope and the duplicate.
 
 ### Task 2: The endpoint
 
-- [ ] **Step 1:** Register the three with `readOnlyHint: false`, `destructiveHint: false` and exact titles.
-- [ ] **Step 2:** Pass the token's scopes from the endpoint to the server; endpoint tests for both kinds of token.
+- [x] **Step 1:** Register the three with `readOnlyHint: false`, `destructiveHint: false` and exact titles.
+- [x] **Step 2:** Pass the token's scopes from the endpoint to the server; endpoint tests for both kinds of token.
 
 ## Acceptance
 
-- [ ] A Read-and-change agent adds a contact, logs a call and moves a deal; each shows in Guildhall.
-- [ ] A Read-only agent gets "This agent may only read. Reconnect it and allow changes."
+- [x] A Read-and-change agent adds a contact, logs a call and moves a deal; each shows in Guildhall.
+- [x] A Read-only agent gets "This agent may only read. Reconnect it and allow changes."
 
 ## Risks / open questions
 

@@ -56,7 +56,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           <ul aria-label="Contacts" className="mt-8 border-t border-rule md:hidden">
             {contacts.map((c) => (
               <li key={c.id} className="border-b border-rule py-3">
-                <Link href={`/contacts/${c.id}`} className="text-accent underline-offset-4 wrap-anywhere hover:underline">{c.name}</Link>
+                <Link href={`/contacts/${c.id}`} className="tap-target text-accent underline-offset-4 wrap-anywhere hover:underline">{c.name}</Link>
                 {c.companyId && (
                   <p className="mt-1 text-sm text-ink wrap-anywhere">
                     <span className="text-muted">Company:</span> <CompanyLink c={c} />
@@ -82,7 +82,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                 {contacts.map((c) => (
                   <tr key={c.id} className="border-b border-rule">
                     <td className="px-3 py-2">
-                      <Link href={`/contacts/${c.id}`} className="text-accent underline-offset-4 hover:underline">{c.name}</Link>
+                      <Link href={`/contacts/${c.id}`} className="tap-target text-accent underline-offset-4 hover:underline">{c.name}</Link>
                     </td>
                     <td className="px-3 py-2">{c.companyId && <CompanyLink c={c} />}</td>
                     <td className="px-3 py-2 text-ink wrap-anywhere">{c.email}</td>
@@ -100,7 +100,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
 }
 
 function CompanyLink({ c }: { c: ContactWithCompany }) {
-  return <Link href={`/companies/${c.companyId}`} className="text-accent underline-offset-4 hover:underline">{c.companyName}</Link>;
+  return <Link href={`/companies/${c.companyId}`} className="tap-target text-accent underline-offset-4 hover:underline">{c.companyName}</Link>;
 }
 
 // The table's other columns, for the stacked rows; blank ones are left out to keep each block short.

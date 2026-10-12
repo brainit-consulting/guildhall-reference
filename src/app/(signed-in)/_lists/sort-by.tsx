@@ -25,7 +25,7 @@ export function SortBy({ path, params, view, columns, defaultLabel, className }:
   return (
     // keyed on the current sort so it starts closed again after a pick
     <details key={`${view.sort}-${view.dir}`} className={className}>
-      <summary className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-sm border border-rule bg-panel px-3 text-sm text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+      <summary className="inline-flex h-10 pointer-coarse:h-[44px] cursor-pointer items-center gap-2 rounded-sm border border-rule bg-panel px-3 text-sm text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
         <span className="text-muted">Sort by:</span> {current.label}
       </summary>
       <ul aria-label="Sort by" className="mt-1 border-y border-rule">
@@ -33,7 +33,7 @@ export function SortBy({ path, params, view, columns, defaultLabel, className }:
           <li key={c.label} className="border-b border-rule last:border-b-0">
             <Link href={listHref(path, params, sortChanges(c.sort, c.dir))} scroll={false}
               aria-current={isCurrent(c) ? "true" : undefined}
-              className={cn("flex items-center justify-between py-2 text-sm underline-offset-4 hover:underline",
+              className={cn("flex items-center justify-between py-2 pointer-coarse:min-h-[44px] text-sm underline-offset-4 hover:underline",
                 isCurrent(c) ? "text-ink" : "text-accent")}>
               {c.label}
               {isCurrent(c) && <Check aria-hidden className="size-4 text-accent" />}

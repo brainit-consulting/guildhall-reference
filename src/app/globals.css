@@ -111,6 +111,17 @@ html {
   }
 }
 
+/* A link that stands alone (a record's name in a list, a column heading): on touch screens its box grows to 44x44.
+   In px, not rem: the 15px root makes min-h-11 41px. */
+@utility tap-target {
+  @media (pointer: coarse) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
 /* A field's edge needs 3:1 against the page (WCAG 1.4.11); --rule is a hairline at about 1.4:1. */
 input:not([type="checkbox"]):not([type="radio"]),
 select,

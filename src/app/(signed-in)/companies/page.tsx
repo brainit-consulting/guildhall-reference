@@ -50,7 +50,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
           <ul aria-label="Companies" className="mt-8 border-t border-rule md:hidden">
             {companies.map((c) => (
               <li key={c.id} className="border-b border-rule py-3">
-                <Link href={`/companies/${c.id}`} className="text-accent underline-offset-4 wrap-anywhere hover:underline">{c.name}</Link>
+                <Link href={`/companies/${c.id}`} className="tap-target text-accent underline-offset-4 wrap-anywhere hover:underline">{c.name}</Link>
                 {details(c).map(([label, value]) => (
                   <p key={label} className="mt-1 text-sm text-ink wrap-anywhere">
                     <span className="text-muted">{label}:</span> {value}
@@ -71,7 +71,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
                 {companies.map((c) => (
                   <tr key={c.id} className="border-b border-rule">
                     <td className="px-3 py-2">
-                      <Link href={`/companies/${c.id}`} className="text-accent underline-offset-4 hover:underline">{c.name}</Link>
+                      <Link href={`/companies/${c.id}`} className="tap-target text-accent underline-offset-4 hover:underline">{c.name}</Link>
                     </td>
                     <td className="px-3 py-2 text-ink wrap-anywhere">{c.website}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-ink">{c.phone}</td>

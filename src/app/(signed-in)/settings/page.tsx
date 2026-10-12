@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { listAllowedEmails } from "@/lib/access";
 import { requireOwner } from "@/lib/auth/session";
@@ -57,6 +58,14 @@ export default async function SettingsPage() {
         <h2 id="enquiry-heading" className="font-display text-2xl text-ink">Your enquiry form</h2>
         <p className="mt-2 text-muted">Put this link on your website. Anyone can use it to ask you for a quote, without an account.</p>
         <CopyAddress url={enquiryFormUrl(env.authUrl)} />
+      </section>
+
+      <section aria-labelledby="agents-heading" className="mt-12 border-t border-rule pt-6">
+        <h2 id="agents-heading" className="font-display text-2xl text-ink">Agents</h2>
+        <p className="mt-2 text-muted">See everything an agent you connected has changed, and when.</p>
+        <Link href="/settings/agent-log" className="mt-4 inline-flex min-h-11 items-center text-accent underline underline-offset-4">
+          Open the agent log
+        </Link>
       </section>
 
       {/* only on the live showcase, where students share the demo account */}

@@ -359,3 +359,26 @@ export const enquiry = pgTable("enquiry", {
 }, (t) => [
   index("enquiry_email_received_on").on(t.email, t.receivedOn),
 ]);
+
+// I8: one row per change an agent made through a write tool. Read tools record nothing. The agent's name is kept as it
+// was, and no key ties the row to the agent or the record, so the log outlives a disconnected agent or a deleted deal.
+export const agentLog = pgTable("agent_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  // the agent's OAuth client ID, for the filter
+  clientId: text("client_id").notNull(),
+  agentName: text("agent_name").notNull(),
+  // who the agent acted for; kept, without a name, if that person is ever removed
+  userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+  tool: text("tool").notNull(),
+  // the one line the tool answered
+  summary: text("summary").notNull(),
+  // the contact, company or deal the change touched
+  recordType: text("record_type").$type<"contact" | "company" | "deal">(),
+  recordId: uuid("record_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [
+  index("agent_log_created_at").on(t.createdAt),
+  index("agent_log_client_id").on(t.clientId, t.createdAt),
+  check("agent_log_record", sql`(${t.recordType} is null) = (${t.recordId} is null)`),
+  check("agent_log_record_type", sql`${t.recordType} in ('contact', 'company', 'deal')`),
+]);

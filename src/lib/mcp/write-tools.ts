@@ -1,20 +1,21 @@
 // The MCP write tools (I8): small jobs that add or move, never remove. One plain function per tool, taking the
 // database and the agent, reusing the pages' rules (last activity, stage-change logging, the Won follow-up) rather than
-// copying them. Each checks guildhall:write itself, so the refusal is tested without the endpoint, and answers one
-// line saying what changed.
+// copying them. Each checks guildhall:write itself, so the refusal is tested without the endpoint, answers one line
+// saying what changed, and records that line in the agent log (I8) when something did.
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
 import { company, contact, deal } from "@/lib/db/schema";
 import { logActivity, type ActivityTarget } from "@/lib/activities";
+import { recordAgentChange, type LoggedAgent } from "@/lib/agent-log";
 import { normaliseEmail } from "@/lib/access";
 import { checkContact, EMPTY_CONTACT } from "@/lib/contacts";
 import { moveDealStage } from "@/lib/deals";
 import type { DealStage } from "@/lib/deal-stages";
 import { findOrAddCompany } from "@/lib/enquiries";
 
-// Who the agent acts as, and whether its token carries guildhall:write.
-export type Agent = { userId: string; canChange: boolean };
+// The agent (its client ID and name, for the log), who it acts as, and whether its token carries guildhall:write.
+export type Agent = LoggedAgent & { userId: string; canChange: boolean };
 
 export const READ_ONLY_REFUSAL = "This agent may only read. Reconnect it and allow changes.";
 
@@ -22,6 +23,15 @@ export const READ_ONLY_REFUSAL = "This agent may only read. Reconnect it and all
 export type WriteResult = { ok: true; text: string; id?: string } | { ok: false; text: string };
 
 const refused = (text: string): WriteResult => ({ ok: false, text });
+
+// A change made: recorded in the agent log against the record it touched, then answered. `forAgent` is said after the
+// summary to the agent only, as the log page never shows an ID.
+async function changed(
+  db: Db, agent: Agent, change: { tool: string; touched: ActivityTarget; summary: string; id: string; forAgent?: string },
+): Promise<WriteResult> {
+  await recordAgentChange(db, agent, { userId: agent.userId, tool: change.tool, summary: change.summary, touched: change.touched });
+  return { ok: true, id: change.id, text: change.forAgent ? `${change.summary} ${change.forAgent}` : change.summary };
+}
 const isId = (id: string) => z.uuid().safeParse(id).success;
 
 export type NewContact = { name: string; email?: string; phone?: string; job_title?: string; company?: string };
@@ -52,7 +62,10 @@ export async function addContact(db: Db, agent: Agent, input: NewContact): Promi
     const firm = companyName ? await findOrAddCompany(tx, companyName) : null;
     const [row] = await tx.insert(contact).values({ ...values, companyId: firm?.id ?? null }).returning({ id: contact.id });
     const at = firm ? ` at '${companyName}'${firm.added ? " (a new company)" : ""}` : "";
-    return { ok: true, id: row.id, text: `Added '${values.name}'${at} to contacts. ID ${row.id}.` };
+    return changed(tx, agent, {
+      tool: "add_contact", touched: { type: "contact", id: row.id }, summary: `Added '${values.name}'${at} to contacts.`,
+      id: row.id, forAgent: `ID ${row.id}.`,
+    });
   });
 }
 
@@ -81,7 +94,10 @@ export async function logActivityOn(
   if (!record) return refused("No contact, company or deal has that ID. Find it with search_contacts or list_pipeline.");
   const saved = await logActivity(db, record, agent.userId, { kind: input.kind, body: input.text });
   if (saved.errors) return refused(`${Object.values(saved.errors).join(" ")} Nothing was logged.`);
-  return { ok: true, id: saved.id, text: `Logged a ${input.kind} on the ${record.type} '${record.name}'.` };
+  return changed(db, agent, {
+    tool: "log_activity", touched: { type: record.type, id: record.id },
+    summary: `Logged a ${input.kind} on the ${record.type} '${record.name}'.`, id: saved.id,
+  });
 }
 
 // move_deal_stage: as dragging it on the board does, so the move is logged on the deal ("Moved from X to Y") and a
@@ -97,5 +113,8 @@ export async function moveDeal(
   const moved = await moveDealStage(db, input.deal_id, input.stage, agent.userId);
   if (!moved) return notFound; // deleted in between
   if (moved.from === moved.to) return { ok: true, text: `'${found.title}' is already at ${moved.to}, so nothing changed.` };
-  return { ok: true, id: input.deal_id, text: `Moved '${found.title}' from ${moved.from} to ${moved.to}.` };
+  return changed(db, agent, {
+    tool: "move_deal_stage", touched: { type: "deal", id: input.deal_id },
+    summary: `Moved '${found.title}' from ${moved.from} to ${moved.to}.`, id: input.deal_id,
+  });
 }

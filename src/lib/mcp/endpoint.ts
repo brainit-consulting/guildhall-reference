@@ -6,6 +6,8 @@ import { requireMcpAuth } from "@better-auth/mcp";
 import { createMcpHandler, type AuthInfo, type McpHttpHandler } from "@modelcontextprotocol/server";
 import { eq } from "drizzle-orm";
 import { READ_SCOPE, WRITE_SCOPE } from "@/lib/agent-access";
+import type { LoggedAgent } from "@/lib/agent-log";
+import { agentName, UNNAMED_AGENT } from "@/lib/agents";
 import type { Db } from "@/lib/db/client";
 import { user } from "@/lib/db/schema";
 import { createGuildhallServer, type Person } from "./server";
@@ -35,15 +37,19 @@ export function mcpEndpoint(opts: { auth: AgentAuth; resource: string; db: () =>
       ? await opts.db().select({ id: user.id, name: user.name }).from(user).where(eq(user.id, claims.sub))
       : [];
     if (!person) return signedOut(opts.resource);
+    const clientId = typeof claims.azp === "string" ? claims.azp : "";
+    // the name it registered with, for the agent log
+    const client: LoggedAgent = { clientId, name: (clientId && await agentName(opts.db(), clientId)) || UNNAMED_AGENT };
     const authInfo: AuthInfo = {
       token: "", // never handed on: the tools don't need it
-      clientId: typeof claims.azp === "string" ? claims.azp : "",
+      clientId,
       scopes: typeof claims.scope === "string" ? claims.scope.split(" ") : [],
       expiresAt: claims.exp,
-      extra: { person },
+      extra: { person, client },
     };
     handler ??= createMcpHandler(({ authInfo }) => createGuildhallServer(
-      opts.db(), authInfo?.extra?.person as Person, authInfo?.scopes.includes(WRITE_SCOPE) ?? false,
+      opts.db(), authInfo?.extra?.person as Person, authInfo?.extra?.client as LoggedAgent,
+      authInfo?.scopes.includes(WRITE_SCOPE) ?? false,
     ));
     return handler.fetch(request, { authInfo });
   }, {

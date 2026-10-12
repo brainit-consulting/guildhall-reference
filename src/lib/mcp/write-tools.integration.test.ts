@@ -2,12 +2,15 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { createTestDb } from "@/test/db";
 import type { Db } from "@/lib/db/client";
-import { activity, company, contact, deal, task, user } from "@/lib/db/schema";
+import { activity, agentLog, company, contact, deal, task, user } from "@/lib/db/schema";
 import { listActivities } from "@/lib/activities";
 import { createCompany, EMPTY_COMPANY } from "@/lib/companies";
 import { createContact, EMPTY_CONTACT } from "@/lib/contacts";
 import { createDeal, EMPTY_DEAL, getDeal } from "@/lib/deals";
 import { addContact, logActivityOn, moveDeal, READ_ONLY_REFUSAL, type Agent } from "./write-tools";
+import { getCompanyRecord, getContactRecord, getDealRecord, listPipeline, listTasksDue, searchContacts } from "./read-tools";
+
+const CLAUDE = { clientId: "claude-client", name: "Claude" };
 
 let t: { db: Db; close(): Promise<void> };
 let agent: Agent;
@@ -16,8 +19,8 @@ beforeEach(async () => {
   t = await createTestDb();
   const [owner] = await t.db.insert(user).values({ id: "owner-1", name: "Margery Kempe", email: "owner@example.com" })
     .returning({ id: user.id });
-  agent = { userId: owner.id, canChange: true };
-  readOnly = { userId: owner.id, canChange: false };
+  agent = { ...CLAUDE, userId: owner.id, canChange: true };
+  readOnly = { ...CLAUDE, userId: owner.id, canChange: false };
 });
 afterEach(() => t.close());
 
@@ -158,5 +161,60 @@ describe("move_deal_stage", () => {
     const before = await snapshot();
     expect(await moveDeal(t.db, readOnly, { deal_id: dealId, stage: "Won" })).toEqual({ ok: false, text: READ_ONLY_REFUSAL });
     expect(await snapshot()).toEqual(before);
+  });
+});
+
+describe("the agent log", () => {
+  const logged = () => t.db.select().from(agentLog);
+
+  it("records each change: the agent, who it acted for, the tool, its line without the ID, and the record", async () => {
+    const added = await addContact(t.db, agent, { name: "Wat Tyler" });
+    const contactId = added.ok ? added.id! : "";
+    const dealId = (await createDeal(t.db, { ...EMPTY_DEAL, title: "Acme fit-out", stage: "Proposal", contactId })).id!;
+    await logActivityOn(t.db, agent, { record_id: contactId, kind: "call", text: "Rang" });
+    await moveDeal(t.db, agent, { deal_id: dealId, stage: "Won" });
+
+    // by tool, which is also the order they were called in
+    const rows = (await logged()).sort((a, b) => a.tool.localeCompare(b.tool));
+    expect(rows).toMatchObject([
+      { clientId: "claude-client", agentName: "Claude", userId: "owner-1", tool: "add_contact",
+        summary: "Added 'Wat Tyler' to contacts.", recordType: "contact", recordId: contactId },
+      { tool: "log_activity", summary: "Logged a call on the contact 'Wat Tyler'.", recordType: "contact", recordId: contactId },
+      { tool: "move_deal_stage", summary: "Moved 'Acme fit-out' from Proposal to Won.", recordType: "deal", recordId: dealId },
+    ]);
+    for (const row of rows) expect(row.createdAt).toBeInstanceOf(Date);
+  });
+
+  it("records a note on a company against the company", async () => {
+    const companyId = (await createCompany(t.db, { ...EMPTY_COMPANY, name: "Lynn Tilers" })).id!;
+    await logActivityOn(t.db, agent, { record_id: companyId, kind: "note", text: "Pays in 30 days" });
+    expect(await logged()).toMatchObject([{ recordType: "company", recordId: companyId }]);
+  });
+
+  it("records nothing when a write changes nothing: refused, unknown, invalid or already there", async () => {
+    const dealId = (await createDeal(t.db, { ...EMPTY_DEAL, title: "Acme fit-out", stage: "Proposal" })).id!;
+    await createContact(t.db, { ...EMPTY_CONTACT, name: "Wat Tyler", email: "wat@lynn.example" });
+    await addContact(t.db, readOnly, { name: "Ann Lynn" });
+    await addContact(t.db, agent, { name: "Walter", email: "wat@lynn.example" });
+    await addContact(t.db, agent, { name: " " });
+    await logActivityOn(t.db, agent, { record_id: UNKNOWN, kind: "note", text: "Hello" });
+    await logActivityOn(t.db, readOnly, { record_id: dealId, kind: "note", text: "Hello" });
+    await moveDeal(t.db, agent, { deal_id: dealId, stage: "Proposal" });
+    await moveDeal(t.db, readOnly, { deal_id: dealId, stage: "Won" });
+    await moveDeal(t.db, agent, { deal_id: UNKNOWN, stage: "Won" });
+    expect(await logged()).toEqual([]);
+  });
+
+  it("records nothing for the read tools", async () => {
+    const contactId = (await createContact(t.db, { ...EMPTY_CONTACT, name: "Wat Tyler" })).id!;
+    const companyId = (await createCompany(t.db, { ...EMPTY_COMPANY, name: "Lynn Tilers" })).id!;
+    const dealId = (await createDeal(t.db, { ...EMPTY_DEAL, title: "Acme fit-out", contactId })).id!;
+    await searchContacts(t.db, "wat");
+    await getContactRecord(t.db, contactId);
+    await getCompanyRecord(t.db, companyId);
+    await getDealRecord(t.db, dealId);
+    await listPipeline(t.db);
+    await listTasksDue(t.db, 7);
+    expect(await logged()).toEqual([]);
   });
 });

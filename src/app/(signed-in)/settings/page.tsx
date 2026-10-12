@@ -8,6 +8,7 @@ import { env } from "@/lib/env";
 import { removeAllowedEmailAction } from "./actions";
 import { AllowedEmailForm } from "./allowed-email-form";
 import { CopyAddress } from "./copy-address";
+import { ResetDemoData } from "./reset-demo-data";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -57,6 +58,15 @@ export default async function SettingsPage() {
         <p className="mt-2 text-muted">Put this link on your website. Anyone can use it to ask you for a quote, without an account.</p>
         <CopyAddress url={enquiryFormUrl(env.authUrl)} />
       </section>
+
+      {/* only on the live showcase, where students share the demo account */}
+      {env.demoEmail && (
+        <section aria-labelledby="demo-data-heading" className="mt-12 border-t border-rule pt-6">
+          <h2 id="demo-data-heading" className="font-display text-2xl text-ink">Demo data</h2>
+          <p className="mt-2 text-muted">Put the Hollow Oak companies, contacts and deals back the way they started, dated from today. Accounts and the emails above stay.</p>
+          <ResetDemoData />
+        </section>
+      )}
     </main>
   );
 }

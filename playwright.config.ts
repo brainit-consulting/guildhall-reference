@@ -31,13 +31,16 @@ export default defineConfig({
   // owner to allow their emails (e2e/owner.ts).
   projects: [
     { name: "setup", testMatch: /owner\.setup\.ts/, use: { ...devices["Desktop Chrome"] } },
-    { name: "chromium", use: { ...devices["Desktop Chrome"] }, dependencies: ["setup"] },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, dependencies: ["setup"], testIgnore: /demo-reset\.spec\.ts/ },
+    // Resetting the demo data wipes every record the other tests made, so it runs after all of them.
+    { name: "demo-reset", testMatch: /demo-reset\.spec\.ts/, use: { ...devices["Desktop Chrome"] }, dependencies: ["chromium"] },
   ],
 
   webServer: {
     command: "npm run e2e:server",
     url: baseURL,
-    // DEMO_EMAIL as on the live showcase, so e2e/demo.spec.ts sees the demo account locked; no other test uses it
+    // DEMO_EMAIL as on the live showcase, so e2e/demo.spec.ts sees the demo account locked and
+    // e2e/demo-reset.spec.ts sees the Reset demo data button; no other test uses it
     env: { PORT: String(port), GUILDHALL_DATA_DIR: ".data/e2e", DEMO_EMAIL: "demo@hollowoak.example" },
     reuseExistingServer: false,
     timeout: 180_000,

@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { ACTIVITY_KINDS } from "../activity-kinds";
 import { DEAL_STAGES } from "../deal-stages";
 import { TASK_AUTOMATIONS } from "../task-automations";
-import { pgEnum, pgTable, text, timestamp, boolean, check, date, index, integer, jsonb, numeric, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { pgEnum, pgTable, text, timestamp, boolean, check, date, index, integer, jsonb, numeric, primaryKey, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 // ──────────────────────────────────────────────────────────────────
 // Better-Auth core tables (names + column shapes match Better-Auth's
@@ -382,3 +382,11 @@ export const agentLog = pgTable("agent_log", {
   check("agent_log_record", sql`(${t.recordType} is null) = (${t.recordId} is null)`),
   check("agent_log_record_type", sql`${t.recordType} in ('contact', 'company', 'deal')`),
 ]);
+
+// I9: when each connection (an agent, for one person) last called /mcp, for /settings/connections. The connection
+// itself is Better-Auth's oauth_consent row.
+export const agentLastUse = pgTable("agent_last_use", {
+  clientId: text("client_id").notNull().references(() => oauthClient.clientId, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  usedAt: timestamp("used_at").notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.clientId, t.userId] })]);

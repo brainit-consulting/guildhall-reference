@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache";
 import { addAllowedEmail, removeAllowedEmail } from "@/lib/access";
+import { disconnectAgent } from "@/lib/connections";
 import { requireOwner } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import { resetDemoData, resetMessage } from "@/lib/demo-data";
@@ -31,4 +32,11 @@ export async function resetDemoDataAction(): Promise<ResetState> {
   if (result.counts === null) return { error: result.error, message: null };
   refresh();
   return { error: null, message: resetMessage(result.counts) };
+}
+
+// I9: withdraws an agent's consent and tokens; its next call to /mcp is refused.
+export async function disconnectAgentAction(form: FormData) {
+  await requireOwner();
+  await disconnectAgent(db, String(form.get("clientId") ?? ""), String(form.get("userId") ?? ""));
+  refresh();
 }

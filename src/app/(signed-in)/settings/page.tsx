@@ -62,10 +62,15 @@ export default async function SettingsPage() {
 
       <section aria-labelledby="agents-heading" className="mt-12 border-t border-rule pt-6">
         <h2 id="agents-heading" className="font-display text-2xl text-ink">Agents</h2>
-        <p className="mt-2 text-muted">See everything an agent you connected has changed, and when.</p>
-        <Link href="/settings/agent-log" className="mt-4 inline-flex min-h-11 items-center text-accent underline underline-offset-4">
-          Open the agent log
-        </Link>
+        <p className="mt-2 text-muted">See which agents can reach your Guildhall and disconnect one, or see everything an agent you connected has changed, and when.</p>
+        <div className="mt-4 flex flex-wrap gap-x-6">
+          <Link href="/settings/connections" className="inline-flex min-h-11 items-center text-accent underline underline-offset-4">
+            Connected agents
+          </Link>
+          <Link href="/settings/agent-log" className="inline-flex min-h-11 items-center text-accent underline underline-offset-4">
+            Open the agent log
+          </Link>
+        </div>
       </section>
 
       {/* only on the live showcase, where students share the demo account */}

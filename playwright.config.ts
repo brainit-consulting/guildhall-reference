@@ -37,7 +37,8 @@ export default defineConfig({
   webServer: {
     command: "npm run e2e:server",
     url: baseURL,
-    env: { PORT: String(port), GUILDHALL_DATA_DIR: ".data/e2e" },
+    // DEMO_EMAIL as on the live showcase, so e2e/demo.spec.ts sees the demo account locked; no other test uses it
+    env: { PORT: String(port), GUILDHALL_DATA_DIR: ".data/e2e", DEMO_EMAIL: "demo@hollowoak.example" },
     reuseExistingServer: false,
     timeout: 180_000,
   },

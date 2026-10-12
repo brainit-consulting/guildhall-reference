@@ -7,7 +7,7 @@ describe("parseEnv", () => {
   it("needs nothing on this computer", () => {
     expect(parseEnv({})).toEqual({
       databaseUrl: null, authSecret: DEV_SECRET, authUrl: "http://localhost:3000", onVercel: false,
-      dataDir: ".data/pglite", trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"],
+      dataDir: ".data/pglite", trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"], demoEmail: null,
     });
   });
   it("follows PORT, so any dev server's sign-in works", () => {
@@ -43,5 +43,12 @@ describe("parseEnv", () => {
   });
   it("lets tests point the built-in database elsewhere", () => {
     expect(parseEnv({ GUILDHALL_DATA_DIR: "memory://" }).dataDir).toBe("memory://");
+  });
+  it("names the demo account in lower case, and treats an empty one as unset", () => {
+    expect(parseEnv({ DEMO_EMAIL: "Demo@HollowOak.example" }).demoEmail).toBe("demo@hollowoak.example");
+    expect(parseEnv({ DEMO_EMAIL: "" }).demoEmail).toBeNull();
+  });
+  it("refuses a demo email that isn't one", () => {
+    expect(() => parseEnv({ DEMO_EMAIL: "demo" })).toThrow(/DEMO_EMAIL/);
   });
 });

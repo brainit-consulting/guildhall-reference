@@ -10,6 +10,8 @@ const MESSAGES: Record<string, string> = {
   VALIDATION_ERROR: "Something you typed wasn't accepted. Check your name, email and password and try again.",
   // ours, thrown by the sign-up gate in src/lib/access.ts once the Guildhall has an owner
   SIGN_UP_CLOSED: "Ask the owner to add your email in Settings.",
+  // ours, thrown by the demo guard in src/lib/demo.ts
+  DEMO_LOCKED: "The demo account can't be changed.",
 };
 
 // Loose on purpose: catches the obvious slips ("margery-at-lynn") and leaves the rest to the server.

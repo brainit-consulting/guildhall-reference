@@ -63,7 +63,8 @@ export async function makeClient(db: Db, dealId: string): Promise<MadeClient | n
 }
 
 // The company's (or contact's) name as it is now; the one stored when the client was made once it has been deleted.
-const clientName = sql<string>`coalesce(case when ${client.madeFrom} = 'company' then ${company.name} else ${contact.name} end, ${client.name})`;
+// Needs company and contact left-joined on the client's companyId and contactId; projects use it too.
+export const clientName = sql<string>`coalesce(case when ${client.madeFrom} = 'company' then ${company.name} else ${contact.name} end, ${client.name})`;
 
 // The deals linked to a client that are at Won now.
 const wonDeals = (clientId: typeof client.id) =>

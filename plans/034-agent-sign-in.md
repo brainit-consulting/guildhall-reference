@@ -1,6 +1,6 @@
 # 034 — Sign-in for agents
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-11
 
@@ -52,7 +52,7 @@ granted scopes to what the owner picks, never adding `guildhall:write` for Read 
 ### Task 4: Try it
 
 - [x] **Step 1:** MCP Inspector against the dev server on port 5856: sign in, consent, list tools.
-- [ ] **Step 2:** typecheck, lint, test, test:e2e, build.
+- [x] **Step 2:** typecheck, lint, test, test:e2e, build.
 
 ## Acceptance
 

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
+import { makeClient } from "@/lib/clients";
 import { createDeal, deleteDeal, updateDeal, type DealErrors, type DealInput } from "@/lib/deals";
 
 // Each action checks the session itself: server actions can be called by anyone who can send a POST.
@@ -39,4 +40,14 @@ export async function deleteDealAction(form: FormData) {
   await requireSession();
   await deleteDeal(db, String(form.get("id") ?? ""));
   redirect("/deals");
+}
+
+// "Make client" on a Won deal: off to the client it made or reused. The button only shows on a Won deal with a company
+// or contact, so an error means the deal changed in another tab.
+export async function makeClientAction(_prev: { error: string | null }, form: FormData): Promise<{ error: string | null }> {
+  await requireSession();
+  const made = await makeClient(db, String(form.get("id") ?? ""));
+  if (!made) redirect("/deals"); // deleted meanwhile
+  if (made.error) return { error: made.error };
+  redirect(`/clients/${made.id}`);
 }

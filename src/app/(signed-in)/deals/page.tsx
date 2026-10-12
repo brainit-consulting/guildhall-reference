@@ -98,7 +98,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
           <ul aria-label="Deals" className="mt-6 border-t border-rule md:hidden">
             {deals.map((d) => (
               <li key={d.id} className="border-b border-rule py-3">
-                <Link href={`/deals/${d.id}`} className="text-accent underline-offset-4 wrap-anywhere hover:underline">{d.title}</Link>
+                <Link href={`/deals/${d.id}`} className="tap-target text-accent underline-offset-4 wrap-anywhere hover:underline">{d.title}</Link>
                 <Source d={d} />
                 {d.companyId && (
                   <p className="mt-1 text-sm text-ink wrap-anywhere">
@@ -128,7 +128,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
                 {deals.map((d) => (
                   <tr key={d.id} className="border-b border-rule">
                     <td className="px-3 py-2">
-                      <Link href={`/deals/${d.id}`} className="text-accent underline-offset-4 hover:underline">{d.title}</Link>
+                      <Link href={`/deals/${d.id}`} className="tap-target text-accent underline-offset-4 hover:underline">{d.title}</Link>
                       <Source d={d} />
                     </td>
                     <td className="px-3 py-2">{d.companyId && <CompanyLink d={d} />}</td>
@@ -163,5 +163,5 @@ function Source({ d }: { d: DealWithNames }) {
 }
 
 function CompanyLink({ d }: { d: DealWithNames }) {
-  return <Link href={`/companies/${d.companyId}`} className="text-accent underline-offset-4 hover:underline">{d.companyName}</Link>;
+  return <Link href={`/companies/${d.companyId}`} className="tap-target text-accent underline-offset-4 hover:underline">{d.companyName}</Link>;
 }

@@ -14,7 +14,7 @@ export function SortHeading({ path, params, view, column, label, className }: {
     <th scope="col" aria-sort={on ? (view.dir === "desc" ? "descending" : "ascending") : undefined}
       className={cn("px-3 py-2 font-medium", className)}>
       <Link href={listHref(path, params, sortChanges(column, nextDir(view, column)))} scroll={false}
-        className={cn("inline-flex items-center gap-1 underline-offset-4 hover:text-ink hover:underline", on && "text-ink")}>
+        className={cn("tap-target inline-flex items-center gap-1 underline-offset-4 hover:text-ink hover:underline", on && "text-ink")}>
         {label}
         {on && <Arrow aria-hidden className="size-3.5 text-accent" />}
       </Link>

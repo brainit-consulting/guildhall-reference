@@ -1,11 +1,21 @@
 import { createHash, randomBytes } from "node:crypto";
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test as base, type APIRequestContext, type Page } from "@playwright/test";
 import { OWNER, OWNER_STATE } from "./owner";
 
 // An agent connecting to Guildhall (I5), the way the MCP Inspector does: it registers, sends the owner's browser to
 // sign in and to /consent, and swaps the code it gets back for a token. The agent's own callback address isn't
 // running, so the test catches the browser there.
 const COLD = { timeout: 60_000 };
+
+// The agent's own requests: no browser cookies, as a real agent has none (signed-in tests' `request` carries the
+// owner's, and Better-Auth then asks for an Origin header as it would of a web page).
+const test = base.extend<{ agent: APIRequestContext }>({
+  agent: async ({ playwright, baseURL }, provide) => {
+    const agent = await playwright.request.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
+    await provide(agent);
+    await agent.dispose();
+  },
+});
 const CALLBACK = "http://127.0.0.1:9/oauth/callback";
 const SCOPES = "openid profile email offline_access guildhall:read guildhall:write";
 
@@ -17,7 +27,7 @@ async function register(request: APIRequestContext) {
     },
     timeout: 60_000,
   });
-  expect(res.ok()).toBe(true);
+  expect(res.ok(), await res.text()).toBe(true);
   return (await res.json()).client_id as string;
 }
 
@@ -45,12 +55,12 @@ async function tokenFor(request: APIRequestContext, baseURL: string, clientId: s
       resource: `${baseURL}/mcp`,
     },
   });
-  expect(res.ok()).toBe(true);
+  expect(res.ok(), await res.text()).toBe(true);
   return (await res.json()) as { access_token: string; scope: string };
 }
 
 test.describe("signed out", () => {
-  test("signs in first, then Read only grants reading and no changes", async ({ page, request, baseURL }) => {
+  test("signs in first, then Read only grants reading and no changes", async ({ page, agent: request, baseURL }) => {
     const { clientId, verifier, back } = await startSignIn(page, request, baseURL!);
     await expect(page).toHaveURL(/\/signin\?/, COLD);
     await page.getByLabel("Email").fill(OWNER.email);
@@ -81,7 +91,7 @@ test.describe("signed out", () => {
 test.describe("signed in", () => {
   test.use({ storageState: OWNER_STATE });
 
-  test("Read and change grants changes", async ({ page, request, baseURL }) => {
+  test("Read and change grants changes", async ({ page, agent: request, baseURL }) => {
     const { clientId, verifier, back } = await startSignIn(page, request, baseURL!);
     await expect(page.getByRole("heading", { name: "Test Agent wants to use your Guildhall" })).toBeVisible(COLD);
     await page.getByRole("radio", { name: /Read and change/ }).check();
@@ -91,7 +101,7 @@ test.describe("signed in", () => {
     expect(token.scope.split(" ")).toEqual(expect.arrayContaining(["guildhall:read", "guildhall:write"]));
   });
 
-  test("Don't allow sends the agent away with no code", async ({ page, request, baseURL }) => {
+  test("Don't allow sends the agent away with no code", async ({ page, agent: request, baseURL }) => {
     const { back } = await startSignIn(page, request, baseURL!);
     await expect(page.getByRole("heading", { name: "Test Agent wants to use your Guildhall" })).toBeVisible(COLD);
     await page.getByRole("button", { name: "Don't allow" }).click();
@@ -105,7 +115,7 @@ test.describe("signed in", () => {
     await expect(page.getByRole("alert")).toHaveText("This link doesn't work any more. Go back to the agent and connect it again.", COLD);
   });
 
-  test("fits a 375px phone", async ({ page, request, baseURL }) => {
+  test("fits a 375px phone", async ({ page, agent: request, baseURL }) => {
     await page.setViewportSize({ width: 375, height: 700 });
     await startSignIn(page, request, baseURL!);
     await expect(page.getByRole("heading", { name: "Test Agent wants to use your Guildhall" })).toBeVisible(COLD);

@@ -1,6 +1,6 @@
 # 038 — Clients
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-12
 
@@ -25,25 +25,27 @@ contact's) current name, falling back to the stored one when it has been deleted
 
 ### Task 1: The rule
 
-- [ ] **Step 1:** `client` and `deal.client_id` in the schema, a migration.
-- [ ] **Step 2:** `src/lib/clients.ts`: `makeClient`, `listClients`, `getClient`, `listClientWonDeals`; demo reset
+- [x] **Step 1:** `client` and `deal.client_id` in the schema, a migration.
+- [x] **Step 2:** `src/lib/clients.ts`: `makeClient`, `listClients`, `getClient`, `listClientWonDeals`; demo reset
   clears clients.
-- [ ] **Step 3:** Integration tests: creates once, reuses for a second Won deal of the company, contact-only clients,
+- [x] **Step 3:** Integration tests: creates once, reuses for a second Won deal of the company, contact-only clients,
   refuses a deal that isn't Won or has neither, deleting the company keeps the client.
 
 ### Task 2: The pages
 
-- [ ] **Step 1:** "Make client" (or the linked client) on a Won deal's page.
-- [ ] **Step 2:** Clients in the menu; `/clients` with name, contact person, won deals; `/clients/[id]`.
-- [ ] **Step 3:** Playwright: make a client from two Won deals of one company, see one client with 2 won deals.
+- [x] **Step 1:** "Make client" (or the linked client) on a Won deal's page.
+- [x] **Step 2:** Clients in the menu; `/clients` with name, contact person, won deals; `/clients/[id]`.
+- [x] **Step 3:** Playwright: make a client from two Won deals of one company, see one client with 2 won deals.
 
 ## Acceptance
 
-- [ ] "Make client" creates the client once; a second Won deal for the same company reuses it.
-- [ ] Tried in a browser at 375px and desktop.
+- [x] "Make client" creates the client once; a second Won deal for the same company reuses it.
+- [x] Tried in a browser at 375px and desktop.
 
 ## Risks / open questions
 
 - "Won deals" on a client are the deals linked to it that are at Won now; a linked deal moved out of Won stays linked
   but stops counting.
 - A deal with neither company nor contact can't become a client; its page says to add one.
+- The client page has no Edit or Delete, and the name isn't typed by anyone: the issue asks for neither.
+- Touch-sized buttons come from globals.css (`pointer: coarse`), as on every other page.

@@ -13,6 +13,8 @@ const schema = z.object({
   VERCEL: z.string().optional(),
   VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
   GUILDHALL_DATA_DIR: z.string().default(".data/pglite"),
+  // an empty line in .env counts as unset
+  DEMO_EMAIL: z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? undefined : v), z.email().optional()),
 });
 
 export type Env = {
@@ -23,6 +25,8 @@ export type Env = {
   dataDir: string;
   /** Extra origins sign-in accepts: any local port on this computer (a coder may use `-p` or 127.0.0.1), none live. */
   trustedOrigins: string[];
+  /** The shared showcase account, lower-cased: its password, email and name can't be changed (src/lib/demo.ts). */
+  demoEmail: string | null;
 };
 
 const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
@@ -49,6 +53,7 @@ export function parseEnv(raw: Record<string, string | undefined>): Env {
     onVercel,
     dataDir: e.GUILDHALL_DATA_DIR,
     trustedOrigins: local ? ["http://localhost:*", "http://127.0.0.1:*"] : [],
+    demoEmail: e.DEMO_EMAIL ? e.DEMO_EMAIL.trim().toLowerCase() : null,
   };
 }
 

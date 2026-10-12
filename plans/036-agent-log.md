@@ -1,6 +1,6 @@
 # 036 — The agent log
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-12
 
@@ -24,23 +24,23 @@ agent. The page reads 50 entries a page, newest first, filtered by agent (its cl
 
 ### Task 1: Recording
 
-- [ ] **Step 1:** `agent_log` in the schema, a migration.
-- [ ] **Step 2:** `src/lib/agent-log.ts`: `recordAgentChange`, `listAgentLog` (page, agent), `listLoggedAgents`.
-- [ ] **Step 3:** The write tools say which record they touched and record an entry; `Agent` carries the client's ID
+- [x] **Step 1:** `agent_log` in the schema, a migration.
+- [x] **Step 2:** `src/lib/agent-log.ts`: `recordAgentChange`, `listAgentLog` (page, agent), `listLoggedAgents`.
+- [x] **Step 3:** The write tools say which record they touched and record an entry; `Agent` carries the client's ID
   and name; the endpoint looks the name up.
-- [ ] **Step 4:** Integration tests: each write tool records one entry, refusals and read tools record none.
+- [x] **Step 4:** Integration tests: each write tool records one entry, refusals and read tools record none.
 
 ### Task 2: The page
 
-- [ ] **Step 1:** `/settings/agent-log` (owner only): entries, filter by agent, Newer/Older pages, links to records.
-- [ ] **Step 2:** A link to it from Settings.
-- [ ] **Step 3:** Playwright: an agent moves a deal; the log shows the line, the time and the link; a member is sent
+- [x] **Step 1:** `/settings/agent-log` (owner only): entries, filter by agent, Newer/Older pages, links to records.
+- [x] **Step 2:** A link to it from Settings.
+- [x] **Step 3:** Playwright: an agent moves a deal; the log shows the line, the time and the link; a member is sent
   home.
 
 ## Acceptance
 
-- [ ] After an agent moves a deal, the log shows "<agent>, for <person>: Moved '<deal>' from Proposal to Won".
-- [ ] Tried in a browser at 375px and desktop.
+- [x] After an agent moves a deal, the log shows "<agent>, for <person>: Moved '<deal>' from Proposal to Won".
+- [x] Tried in a browser at 375px and desktop.
 
 ## Risks / open questions
 

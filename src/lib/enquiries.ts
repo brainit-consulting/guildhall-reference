@@ -71,7 +71,7 @@ export async function receiveEnquiry(db: Db, input: EnquiryInput, now = new Date
 
   await db.transaction(async (t) => {
     const tx = t as unknown as Db;
-    const companyId = values.company ? await findOrAddCompany(tx, values.company) : null;
+    const companyId = values.company ? (await findOrAddCompany(tx, values.company)).id : null;
     const who = await findOrAddContact(tx, values, email, companyId);
     const [row] = await tx.insert(deal).values({
       title: `Enquiry from ${values.name}`, stage: "New", source: WEB_FORM, contactId: who.id, companyId: companyId ?? who.companyId,
@@ -82,14 +82,15 @@ export async function receiveEnquiry(db: Db, input: EnquiryInput, now = new Date
   return { result: "saved", errors: null };
 }
 
-// The company of that name, any capitals (the earliest added if several), or a new one.
-async function findOrAddCompany(db: Db, name: string): Promise<string> {
+// The company of that name, any capitals (the earliest added if several), or a new one. The MCP add_contact tool
+// uses it too, and says when it added one.
+export async function findOrAddCompany(db: Db, name: string): Promise<{ id: string; added: boolean }> {
   const [found] = await db.select({ id: company.id }).from(company)
-    .where(sql`lower(trim(${company.name})) = ${name.toLowerCase()}`)
+    .where(sql`lower(trim(${company.name})) = ${name.trim().toLowerCase()}`)
     .orderBy(asc(company.createdAt), asc(company.id)).limit(1);
-  if (found) return found.id;
-  const [row] = await db.insert(company).values({ name }).returning({ id: company.id });
-  return row.id;
+  if (found) return { id: found.id, added: false };
+  const [row] = await db.insert(company).values({ name: name.trim() }).returning({ id: company.id });
+  return { id: row.id, added: true };
 }
 
 // The contact with that email, ignoring capitals and spaces (the earliest added if several), or a new one. Anyone can

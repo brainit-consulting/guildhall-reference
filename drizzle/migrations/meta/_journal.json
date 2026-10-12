@@ -127,6 +127,13 @@
       "when": 1791800891403,
       "tag": "0017_flawless_rafael_vega",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791830109216,
+      "tag": "0018_white_nomad",
+      "breakpoints": true
     }
   ]
 }

@@ -4,8 +4,10 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth/session";
 import { formatDay } from "@/lib/dates";
 import { db } from "@/lib/db/client";
+import { listInvoices } from "@/lib/invoices";
 import { formatMoney } from "@/lib/money";
 import { getProject } from "@/lib/projects";
+import { InvoiceSection } from "../../invoices/invoice-section";
 import { DeleteProject } from "./delete-project";
 import { SetStatus } from "./set-status";
 
@@ -22,6 +24,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const p = await getProject(db, id);
   if (!p) notFound();
+  const invoices = await listInvoices(db, { projectId: p.id });
 
   const fields: [string, React.ReactNode][] = [
     ["Client", <Link key="client" href={`/clients/${p.clientId}`} className={`tap-target ${link}`}>{p.clientName}</Link>],
@@ -52,6 +55,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         <SetStatus id={p.id} status={p.status} />
         <DeleteProject id={p.id} name={p.name} />
       </div>
+
+      <InvoiceSection invoices={invoices} newHref={`/invoices/new?project=${p.id}`} empty="No invoices for this project yet." />
     </main>
   );
 }

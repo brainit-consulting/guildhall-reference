@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { asc, eq } from "drizzle-orm";
 import { createTestDb } from "@/test/db";
 import type { Db } from "@/lib/db/client";
-import { account, activity, allowedEmail, client, company, contact, deal, enquiry, project, session, task, user } from "@/lib/db/schema";
+import { account, activity, allowedEmail, client, company, contact, deal, enquiry, invoice, invoiceLine, project, session, task, user } from "@/lib/db/schema";
 import { createCompany, EMPTY_COMPANY } from "./companies";
 import { EMPTY_ENQUIRY, receiveEnquiry, WEB_FORM } from "./enquiries";
 import { TIME_ZONE, todayIn } from "./dates";
@@ -39,13 +39,17 @@ const counts = async () => ({
   enquiries: (await t.db.select().from(enquiry)).length,
   clients: (await t.db.select().from(client)).length,
   projects: (await t.db.select().from(project)).length,
+  invoices: (await t.db.select().from(invoice)).length,
 });
 
-// Something a student made: a company that is a client with a project, and an enquiry with its contact, deal and note.
+// Something a student made: a company that is a client with a project and an invoice, and an enquiry with its
+// contact, deal and note.
 async function studentData() {
   const companyId = (await createCompany(t.db, { ...EMPTY_COMPANY, name: "Student Co" })).id!;
   const [c] = await t.db.insert(client).values({ name: "Student Co", madeFrom: "company", companyId }).returning({ id: client.id });
-  await t.db.insert(project).values({ name: "Shelves", clientId: c.id, budget: "900.00", startOn: "2026-10-01", endOn: "2026-10-09" });
+  const [p] = await t.db.insert(project).values({ name: "Shelves", clientId: c.id, budget: "900.00", startOn: "2026-10-01", endOn: "2026-10-09" }).returning({ id: project.id });
+  const [i] = await t.db.insert(invoice).values({ clientId: c.id, projectId: p.id, issueOn: "2026-10-09", dueOn: "2026-11-08", taxRate: "15.00" }).returning({ id: invoice.id });
+  await t.db.insert(invoiceLine).values({ invoiceId: i.id, position: 0, description: "Shelves", quantity: "1.00", unitPrice: "900.00" });
   await receiveEnquiry(t.db, { ...EMPTY_ENQUIRY, name: "Wat", email: "wat@lynn.example", message: "Hello" }, NOW);
 }
 
@@ -56,7 +60,7 @@ describe("resetDemoData", () => {
     const result = await resetDemoData(t.db, OWNER, DEMO, NOW);
     expect(result).toEqual({ error: null, counts: { companies: 8, contacts: 12, deals: 10 } });
     expect(resetMessage(result.counts!)).toBe("Demo data is back: 8 companies, 12 contacts, 10 deals.");
-    expect(await counts()).toEqual({ companies: 8, contacts: 12, deals: 10, activities: 13, tasks: 8, enquiries: 1, clients: 0, projects: 0 });
+    expect(await counts()).toEqual({ companies: 8, contacts: 12, deals: 10, activities: 13, tasks: 8, enquiries: 1, clients: 0, projects: 0, invoices: 0 });
     expect(await t.db.select().from(company).where(eq(company.name, "Student Co"))).toHaveLength(0);
   });
 
@@ -73,7 +77,7 @@ describe("resetDemoData", () => {
     await people();
     await resetDemoData(t.db, OWNER, DEMO, NOW);
     await resetDemoData(t.db, OWNER, DEMO, NOW);
-    expect(await counts()).toEqual({ companies: 8, contacts: 12, deals: 10, activities: 13, tasks: 8, enquiries: 1, clients: 0, projects: 0 });
+    expect(await counts()).toEqual({ companies: 8, contacts: 12, deals: 10, activities: 13, tasks: 8, enquiries: 1, clients: 0, projects: 0, invoices: 0 });
   });
 
   it("credits the owner with every activity but the web form's note", async () => {

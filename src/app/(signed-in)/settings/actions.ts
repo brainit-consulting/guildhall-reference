@@ -7,6 +7,7 @@ import { requireOwner } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import { resetDemoData, resetMessage } from "@/lib/demo-data";
 import { env } from "@/lib/env";
+import { setTaxRate } from "@/lib/settings";
 
 // Each action checks the owner itself: server actions can be called by anyone who can send a POST.
 
@@ -39,4 +40,16 @@ export async function disconnectAgentAction(form: FormData) {
   await requireOwner();
   await disconnectAgent(db, String(form.get("clientId") ?? ""), String(form.get("userId") ?? ""));
   refresh();
+}
+
+export type TaxRateState = { error: string | null; saved: string | null; typed: string };
+
+// I11: the rate copied onto invoices made from now on.
+export async function setTaxRateAction(_prev: TaxRateState, form: FormData): Promise<TaxRateState> {
+  await requireOwner();
+  const typed = String(form.get("taxRate") ?? "");
+  const result = await setTaxRate(db, typed);
+  if (result.value === null) return { error: result.error, saved: null, typed };
+  refresh();
+  return { error: null, saved: result.value, typed: result.value };
 }

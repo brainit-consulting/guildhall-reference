@@ -1,6 +1,6 @@
 # 039 — Projects
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-12
 
@@ -33,15 +33,15 @@ Delete.
 
 ### Task 2: The pages
 
-- [ ] **Step 1:** Projects in the menu; `/projects`; `/projects/new?client=`; `/projects/[id]`; `/projects/[id]/edit`.
-- [ ] **Step 2:** Projects section with "Add project" on the client page.
-- [ ] **Step 3:** Playwright: add a project from a client's page, see it on `/projects` and the client page, mark it
+- [x] **Step 1:** Projects in the menu; `/projects`; `/projects/new?client=`; `/projects/[id]`; `/projects/[id]/edit`.
+- [x] **Step 2:** Projects section with "Add project" on the client page.
+- [x] **Step 3:** Playwright: add a project from a client's page, see it on `/projects` and the client page, mark it
   done, delete it.
 
 ## Acceptance
 
-- [ ] I can add a project to a client, see it on `/projects` and the client's page, and mark it done.
-- [ ] Tried in a browser at 375px and desktop.
+- [x] I can add a project to a client, see it on `/projects` and the client's page, and mark it done.
+- [x] Tried in a browser at 375px and desktop.
 
 ## Risks / open questions
 

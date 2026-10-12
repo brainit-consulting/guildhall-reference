@@ -33,7 +33,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   return (
     <main className="max-w-2xl px-6 py-12 md:px-12">
-      <Link href="/projects" className={`text-sm ${link}`}>Projects</Link>
+      <Link href="/projects" className={`tap-target text-sm ${link}`}>Projects</Link>
       <h1 className="mt-2 font-display text-4xl text-ink -ml-px md:-ml-6 wrap-anywhere">{p.name}</h1>
 
       <dl className="mt-8 border-t border-rule">

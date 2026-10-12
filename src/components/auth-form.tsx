@@ -38,6 +38,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
         setPending(false);
         return;
       }
+      // An agent's sign-in (I5) carries on to /consent; Better-Auth says where.
+      const next = (result.data as { redirect?: boolean; url?: string } | null)?.url;
+      if (next) return window.location.assign(next);
       router.replace("/home");
       router.refresh();
     } catch {

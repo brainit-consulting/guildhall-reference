@@ -1,5 +1,6 @@
 // The MCP server: the read tools registered with what an agent needs to pick and call them. A fresh server per
-// request (createMcpHandler is stateless), built over whichever database it is given.
+// request (createMcpHandler is stateless), built over whichever database it is given, for the person who connected
+// the agent (I5): the tools run as them.
 import { McpServer, type CallToolResult } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import type { Db } from "@/lib/db/client";
@@ -22,8 +23,14 @@ function notFound(what: string): CallToolResult {
 
 const id = z.string().describe("The record's ID, as another Guildhall tool returned it.");
 
-export function createGuildhallServer(db: Db): McpServer {
-  const server = new McpServer({ name: "guildhall", title: `${BUSINESS_NAME} (Guildhall)`, version: APP_VERSION });
+// Who signed the agent in. Never a token.
+export type Person = { id: string; name: string };
+
+export function createGuildhallServer(db: Db, person: Person): McpServer {
+  const server = new McpServer(
+    { name: "guildhall", title: `${BUSINESS_NAME} (Guildhall)`, version: APP_VERSION },
+    { instructions: `${BUSINESS_NAME}'s Guildhall, a CRM. You are signed in as ${person.name}.` },
+  );
 
   server.registerTool("search_contacts", {
     title: "Search contacts",

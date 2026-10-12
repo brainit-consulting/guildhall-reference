@@ -86,12 +86,13 @@ export async function logActivity(db: Db, target: ActivityTarget, userId: string
   return addActivity(db, target, userId, checked.values);
 }
 
-// A record's timeline, newest first.
-export async function listActivities(db: Db, target: ActivityTarget): Promise<ActivityEntry[]> {
+// A record's timeline, newest first; the latest `limit` only when given (the MCP tools' last 10).
+export async function listActivities(db: Db, target: ActivityTarget, limit?: number): Promise<ActivityEntry[]> {
   if (!isId(target.id)) return [];
-  return db.select({ id: activity.id, kind: activity.kind, body: activity.body, createdAt: activity.createdAt,
+  const query = db.select({ id: activity.id, kind: activity.kind, body: activity.body, createdAt: activity.createdAt,
     who: sql<string | null>`coalesce(${user.name}, ${activity.source})` })
     .from(activity).leftJoin(user, eq(activity.userId, user.id))
     .where(eq(column[target.type], target.id))
     .orderBy(desc(activity.createdAt), desc(activity.id));
+  return limit === undefined ? query : query.limit(limit);
 }

@@ -2,7 +2,7 @@
 // dated from the moment it's pressed. Taken row for row from the seed script that first filled the live site.
 import { randomUUID } from "node:crypto";
 import type { Db } from "@/lib/db/client";
-import { activity, client, company, contact, deal, enquiry, project, task } from "@/lib/db/schema";
+import { activity, client, company, contact, deal, enquiry, invoice, project, task } from "@/lib/db/schema";
 import type { ActivityKind } from "@/lib/activity-kinds";
 import type { DealStage } from "@/lib/deal-stages";
 import { TIME_ZONE, todayIn } from "@/lib/dates";
@@ -179,6 +179,7 @@ export async function resetDemoData(db: Db, who: Who, demoEmail: string | null, 
     await tx.delete(task);
     await tx.delete(enquiry);
     await tx.delete(deal);
+    await tx.delete(invoice); // before clients, which an invoice keeps from being deleted
     await tx.delete(project);
     await tx.delete(client);
     await tx.delete(contact);

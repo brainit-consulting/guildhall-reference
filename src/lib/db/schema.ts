@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { ACTIVITY_KINDS } from "../activity-kinds";
 import { DEAL_STAGES } from "../deal-stages";
 import { TASK_AUTOMATIONS } from "../task-automations";
-import { pgEnum, pgTable, text, timestamp, boolean, check, date, index, integer, jsonb, numeric, primaryKey, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { pgEnum, pgSequence, pgTable, text, timestamp, boolean, check, date, index, integer, jsonb, numeric, primaryKey, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 // ──────────────────────────────────────────────────────────────────
 // Better-Auth core tables (names + column shapes match Better-Auth's
@@ -437,4 +437,58 @@ export const project = pgTable("project", {
   check("project_ends_after_start", sql`${t.endOn} >= ${t.startOn}`),
   check("project_budget", sql`${t.budget} >= 0`),
   index("project_client_id").on(t.clientId),
+]);
+
+// I11: the business's own settings, one row (id 1), made with its defaults on first save.
+export const businessSettings = pgTable("business_settings", {
+  id: integer("id").primaryKey().default(1),
+  // a percentage: "15.00" is 15%; copied onto each invoice when it's made
+  taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull().default("0"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [
+  check("business_settings_one_row", sql`${t.id} = 1`),
+  check("business_settings_tax_rate", sql`${t.taxRate} >= 0 and ${t.taxRate} <= 100`),
+]);
+
+// I11: invoice numbers. A sequence never hands out a number twice, even after a delete or a rolled-back insert.
+export const invoiceNumber = pgSequence("invoice_number", { startWith: 1 });
+
+export const INVOICE_STATUSES = ["Draft", "Sent", "Paid"] as const;
+export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
+
+// I11: a bill to a client, optionally for one of its projects. The tax rate is the business's when it was made.
+export const invoice = pgTable("invoice", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  // shown as INV-0001
+  number: integer("number").notNull().unique().default(sql`nextval('invoice_number')`),
+  // a client with invoices can't be deleted out from under them; demo reset deletes the invoices first
+  clientId: uuid("client_id").notNull().references(() => client.id, { onDelete: "restrict" }),
+  // deleting a project keeps its invoices
+  projectId: uuid("project_id").references(() => project.id, { onDelete: "set null" }),
+  issueOn: date("issue_on", { mode: "string" }).notNull(),
+  dueOn: date("due_on", { mode: "string" }).notNull(),
+  taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull(),
+  status: text("status").$type<InvoiceStatus>().notNull().default("Draft"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [
+  check("invoice_status", sql`${t.status} in ('Draft', 'Sent', 'Paid')`),
+  check("invoice_due_after_issue", sql`${t.dueOn} >= ${t.issueOn}`),
+  check("invoice_tax_rate", sql`${t.taxRate} >= 0 and ${t.taxRate} <= 100`),
+  index("invoice_client_id").on(t.clientId),
+  index("invoice_project_id").on(t.projectId),
+]);
+
+// I11: one line of an invoice, in the order it was typed. Quantity and unit price are exact, strings in TypeScript.
+export const invoiceLine = pgTable("invoice_line", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  invoiceId: uuid("invoice_id").notNull().references(() => invoice.id, { onDelete: "cascade" }),
+  position: integer("position").notNull(),
+  description: text("description").notNull(),
+  quantity: numeric("quantity", { precision: 12, scale: 2 }).notNull(),
+  unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
+}, (t) => [
+  check("invoice_line_quantity", sql`${t.quantity} > 0`),
+  check("invoice_line_unit_price", sql`${t.unitPrice} >= 0`),
+  uniqueIndex("invoice_line_position").on(t.invoiceId, t.position),
 ]);

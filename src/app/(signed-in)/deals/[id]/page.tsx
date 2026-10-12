@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth/session";
+import { clientSource, getClient } from "@/lib/clients";
 import { formatDay } from "@/lib/dates";
 import { db } from "@/lib/db/client";
 import { getDeal } from "@/lib/deals";
 import { formatMoney } from "@/lib/money";
 import { StageName } from "../stage-name";
 import { DeleteDeal } from "./delete-deal";
+import { MakeClient } from "./make-client";
 import { Activities } from "../../_activities/activities";
 import { Tasks } from "../../_tasks/tasks";
 import { DaysAgo } from "../../_activities/days-ago";
@@ -26,6 +28,14 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
   const d = await getDeal(db, id);
   if (!d) notFound();
   const now = new Date().toISOString();
+  const client = d.clientId ? await getClient(db, d.clientId) : null;
+
+  // I10: the client it is linked to; on a Won deal not yet linked, "Make client" (or why it can't be one yet)
+  const clientRow: [string, React.ReactNode, string?][] = client
+    ? [["Client", <Link key="client" href={`/clients/${client.id}`} className={`tap-target ${link}`}>{client.name}</Link>]]
+    : d.stage !== "Won" ? []
+    : clientSource(d) ? [["Client", <MakeClient key="client" id={d.id} />]]
+    : [["Client", null, "Add a company or contact, then make it a client."]];
 
   // [label, value, what a blank one says]
   const fields: [string, React.ReactNode, string?][] = [
@@ -39,6 +49,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
     ["Last activity", d.lastActivityAt && <DaysAgo key="last" at={d.lastActivityAt.toISOString()} now={now} />, "Nothing logged yet"],
     // only deals that came from somewhere ("Web form"); ones added by hand show nothing new
     ...(d.source ? [["Source", d.source] as [string, React.ReactNode]] : []),
+    ...clientRow,
   ];
 
   return (

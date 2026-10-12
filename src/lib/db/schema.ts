@@ -258,6 +258,27 @@ export const contact = pgTable("contact", {
   index("contact_company_id").on(t.companyId),
 ]);
 
+// I10: a business the owner works for, made from a Won deal's company or, with no company, its contact. The name is
+// kept as it was made, for when that company or contact is deleted; the pages show the current one while it exists.
+export const client = pgTable("client", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  madeFrom: text("made_from").$type<"company" | "contact">().notNull(),
+  // deleting the company or contact keeps the client
+  companyId: uuid("company_id").references(() => company.id, { onDelete: "set null" }),
+  // the contact person: the deal's contact when it was made
+  contactId: uuid("contact_id").references(() => contact.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [
+  check("client_made_from", sql`${t.madeFrom} in ('company', 'contact')`),
+  // "once" is the database's job, so two tabs pressing Make client together still make one; makeClient inserts with
+  // on conflict do nothing against these. made_from rather than "company_id is null", so deleting a company can't
+  // collide with a client made from its contact.
+  uniqueIndex("client_one_per_company").on(t.companyId).where(sql`${t.madeFrom} = 'company'`),
+  uniqueIndex("client_one_per_contact").on(t.contactId).where(sql`${t.madeFrom} = 'contact'`),
+  index("client_contact_id").on(t.contactId),
+]);
+
 // B9: the fixed stages, in order (src/lib/deal-stages.ts).
 export const dealStage = pgEnum("deal_stage", DEAL_STAGES);
 
@@ -277,10 +298,13 @@ export const deal = pgTable("deal", {
   wonOn: date("won_on", { mode: "string" }),
   // B15: where the deal came from ("Web form" for enquiries); null for deals added by hand. No form edits it.
   source: text("source"),
+  // I10: the client "Make client" linked it to; null until then
+  clientId: uuid("client_id").references(() => client.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => [
   index("deal_created_at").on(t.createdAt),
+  index("deal_client_id").on(t.clientId),
   // the deals won in a month
   index("deal_won_on").on(t.wonOn),
   index("deal_by_stage").on(t.stage),

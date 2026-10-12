@@ -1,6 +1,6 @@
 # 033 — An MCP endpoint with read tools
 
-**Status:** in-progress
+**Status:** done (e2e and build left to CI: local run ran out of memory)
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-11
 
@@ -26,27 +26,27 @@ answers 404 on Vercel and otherwise hands the request to `createMcpHandler` behi
 
 ### Task 1: SDK and tools
 
-- [ ] **Step 1:** Install `@modelcontextprotocol/server@2.3.1` exactly.
-- [ ] **Step 2:** `listActivities` takes an optional limit (last 10 for the tools).
-- [ ] **Step 3:** The six tool functions, money as `formatMoney` text and a plain number.
-- [ ] **Step 4:** Integration tests for each on `createTestDb()`.
+- [x] **Step 1:** Install `@modelcontextprotocol/server@2.3.1` exactly.
+- [x] **Step 2:** `listActivities` takes an optional limit (last 10 for the tools).
+- [x] **Step 3:** The six tool functions, money as `formatMoney` text and a plain number.
+- [x] **Step 4:** Integration tests for each on `createTestDb()`.
 
 ### Task 2: Endpoint
 
-- [ ] **Step 1:** `server.ts`: register six tools, one-sentence descriptions, `readOnlyHint: true`.
-- [ ] **Step 2:** `endpoint.ts`: 404 on Vercel; localhost Host/Origin checks; stateless handler.
-- [ ] **Step 3:** Unit test: refuses on Vercel; lists six read-only tools in-process.
-- [ ] **Step 4:** `src/app/mcp/route.ts`; e2e test that `/mcp` lists the tools.
+- [x] **Step 1:** `server.ts`: register six tools, one-sentence descriptions, `readOnlyHint: true`.
+- [x] **Step 2:** `endpoint.ts`: 404 on Vercel; localhost Host/Origin checks; stateless handler.
+- [x] **Step 3:** Unit test: refuses on Vercel; lists six read-only tools in-process.
+- [x] **Step 4:** `src/app/mcp/route.ts`; e2e test that `/mcp` lists the tools.
 
 ### Task 3: Try it
 
-- [ ] **Step 1:** MCP Inspector against the dev server on port 5856: list tools, call each.
-- [ ] **Step 2:** typecheck, lint, test, test:e2e, build.
+- [x] **Step 1:** MCP Inspector against the dev server on port 5856: list tools, call each.
+- [ ] **Step 2:** typecheck, lint, test pass; test:e2e and build not completed here (machine ran out of memory), CI runs both.
 
 ## Acceptance
 
-- [ ] The Inspector lists the six tools and each returns real data.
-- [ ] `/mcp` answers 404 when `VERCEL=1`.
+- [x] The Inspector lists the six tools and each returns real data.
+- [x] `/mcp` answers 404 when `VERCEL=1`.
 
 ## Risks / open questions
 

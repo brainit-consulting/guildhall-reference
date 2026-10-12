@@ -24,9 +24,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
   // [label, value, what a blank one says]
   const fields: [string, React.ReactNode, string][] = [
-    ["Company", c.companyId && <Link href={`/companies/${c.companyId}`} className={link}>{c.companyName}</Link>,
+    ["Company", c.companyId && <Link href={`/companies/${c.companyId}`} className={`tap-target ${link}`}>{c.companyName}</Link>,
       c.madeFrom === "company" ? "Deleted" : "No company"],
-    ["Contact person", c.contactId && <Link href={`/contacts/${c.contactId}`} className={link}>{c.contactName}</Link>, "No contact"],
+    ["Contact person", c.contactId && <Link href={`/contacts/${c.contactId}`} className={`tap-target ${link}`}>{c.contactName}</Link>, "No contact"],
     // the business's day it was made
     ["Client since", formatDay(todayIn(TIME_ZONE, c.createdAt)), ""],
   ];

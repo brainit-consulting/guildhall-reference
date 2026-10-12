@@ -32,7 +32,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
 
   // I10: the client it is linked to; on a Won deal not yet linked, "Make client" (or why it can't be one yet)
   const clientRow: [string, React.ReactNode, string?][] = client
-    ? [["Client", <Link key="client" href={`/clients/${client.id}`} className={link}>{client.name}</Link>]]
+    ? [["Client", <Link key="client" href={`/clients/${client.id}`} className={`tap-target ${link}`}>{client.name}</Link>]]
     : d.stage !== "Won" ? []
     : clientSource(d) ? [["Client", <MakeClient key="client" id={d.id} />]]
     : [["Client", null, "Add a company or contact, then make it a client."]];

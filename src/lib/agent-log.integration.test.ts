@@ -3,7 +3,7 @@ import { createTestDb } from "@/test/db";
 import type { Db } from "@/lib/db/client";
 import { agentLog, user } from "@/lib/db/schema";
 import { createDeal, deleteDeal, EMPTY_DEAL } from "@/lib/deals";
-import { AGENT_LOG_PAGE_SIZE, listAgentLog, listLoggedAgents, recordAgentChange } from "./agent-log";
+import { AGENT_LOG_PAGE_SIZE, MAX_AGENT_LOG_PAGE, listAgentLog, listLoggedAgents, recordAgentChange } from "./agent-log";
 
 let t: { db: Db; close(): Promise<void> };
 beforeEach(async () => {
@@ -64,9 +64,14 @@ describe("listAgentLog", () => {
 
   it("reads page 1 for a page that isn't a whole number above 0", async () => {
     await fill(2);
-    for (const page of [0, -1, 1.5, NaN]) {
+    for (const page of [0, -1, 1.5, NaN, 1e20, Number.MAX_SAFE_INTEGER, MAX_AGENT_LOG_PAGE + 1]) {
       expect((await listAgentLog(t.db, { page })).entries[0].summary, String(page)).toBe("Change 2");
     }
+  });
+
+  it("reads the highest allowed page without an error", async () => {
+    await fill(1);
+    expect(await listAgentLog(t.db, { page: MAX_AGENT_LOG_PAGE })).toEqual({ entries: [], more: false });
   });
 
   it("filters by agent", async () => {

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { listAgentLog, listLoggedAgents, type AgentLogEntry } from "@/lib/agent-log";
+import { listAgentLog, listLoggedAgents, readPage, type AgentLogEntry } from "@/lib/agent-log";
 import { requireOwner } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import type { SearchParams } from "@/lib/list-view";
@@ -50,8 +50,7 @@ export default async function AgentLogPage({ searchParams }: { searchParams: Pro
   const agents = await listLoggedAgents(db);
   // an agent that isn't in the log shows everything rather than an empty page
   const agent = agents.find((a) => a.clientId === first(params.agent))?.clientId ?? null;
-  const asked = Number(first(params.page) || "1");
-  const page = Number.isInteger(asked) && asked > 0 ? asked : 1;
+  const page = readPage(first(params.page));
   const { entries, more } = await listAgentLog(db, { page, clientId: agent });
 
   return (

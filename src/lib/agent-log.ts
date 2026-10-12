@@ -7,6 +7,15 @@ import type { ActivityTarget } from "@/lib/activities";
 import { agentLog, company, contact, deal, user } from "@/lib/db/schema";
 
 export const AGENT_LOG_PAGE_SIZE = 50;
+// Far beyond any real log, and small enough that its OFFSET fits Postgres's bigint.
+export const MAX_AGENT_LOG_PAGE = 1_000_000;
+
+// A page number as asked for (a number, or the address's text): page 1 unless it is a whole number from 1 to
+// MAX_AGENT_LOG_PAGE, so a tampered address shows the newest changes rather than an error.
+export function readPage(asked: number | string | undefined): number {
+  const n = typeof asked === "string" ? (/^\d+$/.test(asked.trim()) ? Number(asked.trim()) : NaN) : asked;
+  return n !== undefined && Number.isSafeInteger(n) && n >= 1 && n <= MAX_AGENT_LOG_PAGE ? n : 1;
+}
 
 // The agent as its token names it: its OAuth client and the name it registered with.
 export type LoggedAgent = { clientId: string; name: string };
@@ -31,7 +40,7 @@ export type AgentLogEntry = {
 export async function listAgentLog(
   db: Db, opts: { page?: number; clientId?: string | null } = {},
 ): Promise<{ entries: AgentLogEntry[]; more: boolean }> {
-  const page = opts.page !== undefined && Number.isInteger(opts.page) && opts.page > 0 ? opts.page : 1;
+  const page = readPage(opts.page);
   const on = (type: ActivityTarget["type"], id: AnyPgColumn) =>
     and(eq(agentLog.recordType, type), eq(agentLog.recordId, id));
   const rows = await db.select({

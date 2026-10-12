@@ -53,6 +53,15 @@ test.describe("as the owner", () => {
     await expect(page.getByRole("heading", { name: title, level: 1 })).toBeVisible();
   });
 
+  test("a page number that's junk or far too big shows the newest changes", async ({ page }) => {
+    for (const asked of ["1e20", "99999999999999999999", "200000000000000000", "abc", "-3"]) {
+      const res = await page.goto(`/settings/agent-log?page=${asked}`);
+      expect(res?.status(), asked).toBe(200);
+      await expect(page.getByRole("heading", { name: "Agent log", level: 1 })).toBeVisible(COLD);
+      await expect(page.getByText("Nothing on this page.")).toBeHidden();
+    }
+  });
+
   test("fits a 375px phone", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 700 });
     await page.goto("/settings/agent-log");

@@ -1,6 +1,6 @@
 # 040 — Invoices
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-12
 
@@ -34,19 +34,22 @@ strings and rounds half up to cents once per figure. `src/lib/invoices.ts` holds
 
 ### Task 2: The pages
 
-- [ ] **Step 1:** Tax rate in Settings.
-- [ ] **Step 2:** Invoices in the menu; `/invoices`, `/invoices/new`, `/invoices/[id]`, `/invoices/[id]/edit`.
-- [ ] **Step 3:** "New invoice" and the client's invoices on a client's page; "New invoice" on a project's page.
-- [ ] **Step 4:** Playwright: three lines, the totals, Mark sent, Mark paid; tax rate in Settings.
+- [x] **Step 1:** Tax rate in Settings.
+- [x] **Step 2:** Invoices in the menu; `/invoices`, `/invoices/new`, `/invoices/[id]`, `/invoices/[id]/edit`.
+- [x] **Step 3:** "New invoice" and the client's invoices on a client's page; "New invoice" on a project's page.
+- [x] **Step 4:** Playwright: three lines, the totals, Mark sent, Mark paid; tax rate in Settings.
 
 ## Acceptance
 
-- [ ] I can make an invoice with three lines, see the right totals, mark it sent, then paid.
-- [ ] Tried in a browser at 375px and desktop.
+- [x] I can make an invoice with three lines, see the right totals, mark it sent, then paid.
+- [x] Tried in a browser at 375px and desktop.
 
 ## Risks / open questions
 
 - Rounding: each line, the subtotal and the tax are rounded half up from exact values; the total is the rounded
   subtotal plus the rounded tax, so the printed figures always add up.
 - Status moves one way, one step at a time: Draft to Sent, Sent to Paid. No undo.
-- Deleting a project leaves its invoices, without the project.
+- Deleting a project leaves its invoices, without the project. A client with invoices can't be deleted (no page
+  deletes clients; demo reset deletes invoices first).
+- A new invoice is due 30 days after it is issued; both dates can be changed on the form.
+- Demo reset doesn't restart the numbering: the sequence carries on, so a number is never reused.

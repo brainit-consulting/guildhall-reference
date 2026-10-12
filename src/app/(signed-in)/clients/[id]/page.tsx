@@ -6,6 +6,7 @@ import { getClient, listClientWonDeals } from "@/lib/clients";
 import { formatDay, TIME_ZONE, todayIn } from "@/lib/dates";
 import { db } from "@/lib/db/client";
 import { formatMoney } from "@/lib/money";
+import { listClientProjects } from "@/lib/projects";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   await requireSession(); // the title holds the client's name, so it is guarded like the page
@@ -20,7 +21,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   const c = await getClient(db, id);
   if (!c) notFound();
-  const deals = await listClientWonDeals(db, c.id);
+  const [deals, projects] = await Promise.all([listClientWonDeals(db, c.id), listClientProjects(db, c.id)]);
 
   // [label, value, what a blank one says]
   const fields: [string, React.ReactNode, string][] = [
@@ -44,6 +45,30 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           </div>
         ))}
       </dl>
+
+      <section aria-labelledby="projects" className="mt-12">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+          <h2 id="projects" className="font-display text-2xl text-ink">Projects</h2>
+          <Link href={`/projects/new?client=${c.id}`} className="inline-flex h-10 items-center rounded-sm bg-accent px-4 text-sm font-medium text-paper hover:opacity-90">
+            Add project
+          </Link>
+        </div>
+        {projects.length === 0 ? (
+          <p className="mt-4 border-t border-rule pt-4 text-muted">No projects for this client yet.</p>
+        ) : (
+          <ul aria-label="Projects" className="mt-4 border-t border-rule">
+            {projects.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule py-3">
+                <Link href={`/projects/${p.id}`} className={`tap-target wrap-anywhere ${link}`}>{p.name}</Link>
+                <span className="text-sm text-muted">
+                  {p.status} · {formatDay(p.startOn)} to {formatDay(p.endOn)}
+                  <span className="ml-3 tabular-nums text-ink">{formatMoney(p.budget)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section aria-labelledby="won-deals" className="mt-12">
         <h2 id="won-deals" className="font-display text-2xl text-ink">Won deals</h2>

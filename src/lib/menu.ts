@@ -11,6 +11,7 @@ export const MENU: readonly MenuItem[] = [
   { href: "/pipeline", label: "Pipeline" },
   { href: "/tasks", label: "Tasks" },
   { href: "/clients", label: "Clients" },
+  { href: "/projects", label: "Projects" },
   { href: "/settings", label: "Settings", ownerOnly: true },
 ];
 

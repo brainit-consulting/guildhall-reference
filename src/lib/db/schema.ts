@@ -414,3 +414,27 @@ export const agentLastUse = pgTable("agent_last_use", {
   userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
   usedAt: timestamp("used_at").notNull().defaultNow(),
 }, (t) => [primaryKey({ columns: [t.clientId, t.userId] })]);
+
+// I10: the statuses a project can have.
+export const PROJECT_STATUSES = ["Active", "Done"] as const;
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+
+// I10: work done for a client, with a budget (exact money, a string in TypeScript) and the days it runs.
+export const project = pgTable("project", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  // no page deletes a client; if one ever goes, its projects go with it
+  clientId: uuid("client_id").notNull().references(() => client.id, { onDelete: "cascade" }),
+  status: text("status").$type<ProjectStatus>().notNull().default("Active"),
+  budget: numeric("budget", { precision: 12, scale: 2 }).notNull(),
+  startOn: date("start_on", { mode: "string" }).notNull(),
+  endOn: date("end_on", { mode: "string" }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [
+  check("project_status", sql`${t.status} in ('Active', 'Done')`),
+  // the date rule holds whoever writes, not only the form
+  check("project_ends_after_start", sql`${t.endOn} >= ${t.startOn}`),
+  check("project_budget", sql`${t.budget} >= 0`),
+  index("project_client_id").on(t.clientId),
+]);

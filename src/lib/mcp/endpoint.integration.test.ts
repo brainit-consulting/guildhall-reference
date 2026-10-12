@@ -7,7 +7,7 @@ import { MCP_RESOURCE } from "@/lib/auth/server";
 import { env } from "@/lib/env";
 import { createContact, EMPTY_CONTACT, listContacts } from "@/lib/contacts";
 import { createDeal, EMPTY_DEAL, getDeal } from "@/lib/deals";
-import { contact } from "@/lib/db/schema";
+import { agentLog, contact } from "@/lib/db/schema";
 import { mcpEndpoint } from "./endpoint";
 
 let t: { db: Db; close(): Promise<void> };
@@ -82,11 +82,13 @@ describe("the /mcp endpoint with a signed-in agent", () => {
     }
   });
 
-  it("answers a tool call with the database's data", async () => {
-    const token = await readOnlyToken();
+  it("answers a tool call with the database's data, recording nothing in the agent log", async () => {
+    const token = await changeToken();
     await createContact(t.db, { ...EMPTY_CONTACT, name: "Ada Lovelace", email: "ada@example.com" });
     const result = await rpc("tools/call", { name: "search_contacts", arguments: { query: "ada" } }, token);
     expect(JSON.parse(result.content[0].text)).toMatchObject([{ name: "Ada Lovelace", email: "ada@example.com" }]);
+    await rpc("tools/call", { name: "list_pipeline", arguments: {} }, token);
+    expect(await t.db.select().from(agentLog)).toEqual([]);
   });
 
   it("says plainly when an ID matches nothing", async () => {
@@ -128,6 +130,11 @@ describe("the write tools over /mcp", () => {
     const moved = await rpc("tools/call", { name: "move_deal_stage", arguments: { deal_id: dealId, stage: "Won" } }, token);
     expect(moved.content[0].text).toBe("Moved 'Acme fit-out' from Proposal to Won.");
     expect((await getDeal(t.db, dealId))!.stage).toBe("Won");
+
+    // each recorded in the agent log under the name the agent registered with, for the person who connected it
+    const log = await t.db.select().from(agentLog);
+    expect(log.map((e) => e.tool).sort()).toEqual(["add_contact", "log_activity", "move_deal_stage"]);
+    for (const entry of log) expect(entry).toMatchObject({ agentName: "MCP Inspector", userId: expect.any(String) });
   });
 
   it("refuses a stage that isn't one of the five", async () => {

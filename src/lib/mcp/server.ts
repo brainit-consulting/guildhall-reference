@@ -11,6 +11,7 @@ import {
 } from "./read-tools";
 import { addContact, LOG_KINDS, logActivityOn, moveDeal, type Agent, type WriteResult } from "./write-tools";
 import { DEAL_STAGES } from "@/lib/deal-stages";
+import type { LoggedAgent } from "@/lib/agent-log";
 
 // The tools only look; an agent may call them as often as it likes.
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
@@ -34,10 +35,11 @@ const id = z.string().describe("The record's ID, as another Guildhall tool retur
 // Who signed the agent in. Never a token.
 export type Person = { id: string; name: string };
 
-// `canChange`: the token carries guildhall:write. The write tools are listed either way, so a read-only agent that
-// tries one is told how to get the access, not that the tool doesn't exist.
-export function createGuildhallServer(db: Db, person: Person, canChange: boolean): McpServer {
-  const agent: Agent = { userId: person.id, canChange };
+// `client`: the agent itself, named in the agent log. `canChange`: the token carries guildhall:write. The write tools
+// are listed either way, so a read-only agent that tries one is told how to get the access, not that the tool doesn't
+// exist.
+export function createGuildhallServer(db: Db, person: Person, client: LoggedAgent, canChange: boolean): McpServer {
+  const agent: Agent = { ...client, userId: person.id, canChange };
   const server = new McpServer(
     { name: "guildhall", title: `${BUSINESS_NAME} (Guildhall)`, version: APP_VERSION },
     { instructions: `${BUSINESS_NAME}'s Guildhall, a CRM. You are signed in as ${person.name}.` },

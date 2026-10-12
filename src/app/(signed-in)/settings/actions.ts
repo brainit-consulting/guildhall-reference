@@ -7,7 +7,7 @@ import { requireOwner } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import { resetDemoData, resetMessage } from "@/lib/demo-data";
 import { env } from "@/lib/env";
-import { setTaxRate } from "@/lib/settings";
+import { setBusinessAddress, setTaxRate } from "@/lib/settings";
 
 // Each action checks the owner itself: server actions can be called by anyone who can send a POST.
 
@@ -52,4 +52,16 @@ export async function setTaxRateAction(_prev: TaxRateState, form: FormData): Pro
   if (result.value === null) return { error: result.error, saved: null, typed };
   refresh();
   return { error: null, saved: result.value, typed: result.value };
+}
+
+export type AddressState = { error: string | null; saved: boolean; typed: string };
+
+// I11: the address printed on invoice PDFs.
+export async function setAddressAction(_prev: AddressState, form: FormData): Promise<AddressState> {
+  await requireOwner();
+  const typed = String(form.get("address") ?? "");
+  const result = await setBusinessAddress(db, typed);
+  if (result.value === null) return { error: result.error, saved: false, typed };
+  refresh();
+  return { error: null, saved: true, typed: result.value };
 }

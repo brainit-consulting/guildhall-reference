@@ -134,6 +134,13 @@
       "when": 1791830109216,
       "tag": "0018_white_nomad",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791837371778,
+      "tag": "0019_gray_blob",
+      "breakpoints": true
     }
   ]
 }

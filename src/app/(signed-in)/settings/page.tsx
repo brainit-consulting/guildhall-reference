@@ -6,8 +6,9 @@ import { requireOwner } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import { enquiryFormUrl } from "@/lib/enquiry-form";
 import { env } from "@/lib/env";
-import { getTaxRate } from "@/lib/settings";
+import { getBusinessAddress, getTaxRate } from "@/lib/settings";
 import { removeAllowedEmailAction } from "./actions";
+import { AddressForm } from "./address-form";
 import { AllowedEmailForm } from "./allowed-email-form";
 import { CopyAddress } from "./copy-address";
 import { ResetDemoData } from "./reset-demo-data";
@@ -17,7 +18,7 @@ export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   await requireOwner();
-  const [allowed, taxRate] = await Promise.all([listAllowedEmails(db), getTaxRate(db)]);
+  const [allowed, taxRate, address] = await Promise.all([listAllowedEmails(db), getTaxRate(db), getBusinessAddress(db)]);
   return (
     <main className="max-w-2xl px-6 py-12 md:px-12">
       <h1 className="font-display text-4xl text-ink -ml-px md:-ml-6">Settings</h1>
@@ -67,6 +68,9 @@ export default async function SettingsPage() {
         <p className="mt-2 text-muted">The tax you charge, as a percentage of each invoice&apos;s subtotal. Enter 0 if you don&apos;t charge tax.</p>
         <div className="mt-6">
           <TaxRateForm current={taxRate} />
+        </div>
+        <div className="mt-8">
+          <AddressForm current={address} />
         </div>
       </section>
 

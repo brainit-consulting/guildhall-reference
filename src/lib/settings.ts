@@ -17,3 +17,32 @@ export async function setTaxRate(db: Db, typed: string, now = new Date()): Promi
     .onConflictDoUpdate({ target: businessSettings.id, set: { taxRate: parsed.value, updatedAt: now } });
   return parsed;
 }
+
+export const MAX_ADDRESS_LINES = 6;
+export const MAX_ADDRESS_LINE = 80;
+
+// What was typed in the address box to the stored form: each line trimmed, blank lines dropped, "\n" between them. ""
+// clears it. Short enough to sit under the business name on an invoice without pushing the lines onto a second page.
+export function parseAddress(typed: string): { value: string; error: null } | { value: null; error: string } {
+  const lines = typed.split(/\r?\n/).map((l) => l.trim().replace(/\s+/g, " ")).filter(Boolean);
+  if (lines.length > MAX_ADDRESS_LINES) return { value: null, error: `Fit the address on ${MAX_ADDRESS_LINES} lines or fewer.` };
+  if (lines.some((l) => l.length > MAX_ADDRESS_LINE)) {
+    return { value: null, error: `Keep each line under ${MAX_ADDRESS_LINE} characters; press Enter to start a new line.` };
+  }
+  return { value: lines.join("\n"), error: null };
+}
+
+// "" until the owner sets one.
+export async function getBusinessAddress(db: Db): Promise<string> {
+  const [row] = await db.select({ address: businessSettings.address }).from(businessSettings).limit(1);
+  return row?.address ?? "";
+}
+
+// The address printed on invoice PDFs, old and new: it is the business's address now, not a copy kept per invoice.
+export async function setBusinessAddress(db: Db, typed: string, now = new Date()): Promise<{ value: string; error: null } | { value: null; error: string }> {
+  const parsed = parseAddress(typed);
+  if (parsed.value === null) return parsed;
+  await db.insert(businessSettings).values({ id: 1, address: parsed.value, updatedAt: now })
+    .onConflictDoUpdate({ target: businessSettings.id, set: { address: parsed.value, updatedAt: now } });
+  return parsed;
+}

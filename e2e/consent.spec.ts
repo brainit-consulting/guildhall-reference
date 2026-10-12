@@ -59,6 +59,20 @@ async function tokenFor(request: APIRequestContext, baseURL: string, clientId: s
   return (await res.json()) as { access_token: string; scope: string };
 }
 
+// One tool call on /mcp as the agent; the answer's text line.
+async function callTool(request: APIRequestContext, token: string, name: string, args: object) {
+  const res = await request.post("/mcp", {
+    headers: { accept: "application/json, text/event-stream", authorization: `Bearer ${token}` },
+    data: { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } },
+    timeout: 60_000,
+  });
+  expect(res.status()).toBe(200);
+  const body = await res.text();
+  // a JSON body, or one SSE event carrying it
+  const json = body.trimStart().startsWith("{") ? body : /^data: (.*)$/m.exec(body)![1];
+  return JSON.parse(json).result.content[0].text as string;
+}
+
 test.describe("signed out", () => {
   test("signs in first, then Read only grants reading and no changes", async ({ page, agent: request, baseURL }) => {
     const { clientId, verifier, back } = await startSignIn(page, request, baseURL!);
@@ -77,6 +91,8 @@ test.describe("signed out", () => {
     const token = await tokenFor(request, baseURL!, clientId, verifier, code!);
     expect(token.scope.split(" ")).toContain("guildhall:read");
     expect(token.scope.split(" ")).not.toContain("guildhall:write");
+    expect(await callTool(request, token.access_token, "add_contact", { name: "Read Only Agent Contact" }))
+      .toBe("This agent may only read. Reconnect it and allow changes.");
 
     // the token opens /mcp
     const res = await request.post("/mcp", {
@@ -91,7 +107,7 @@ test.describe("signed out", () => {
 test.describe("signed in", () => {
   test.use({ storageState: OWNER_STATE });
 
-  test("Read and change grants changes", async ({ page, agent: request, baseURL }) => {
+  test("Read and change grants changes, which show in Guildhall", async ({ page, agent: request, baseURL }) => {
     const { clientId, verifier, back } = await startSignIn(page, request, baseURL!);
     await expect(page.getByRole("heading", { name: "Test Agent wants to use your Guildhall" })).toBeVisible(COLD);
     await page.getByRole("radio", { name: /Read and change/ }).check();
@@ -99,6 +115,15 @@ test.describe("signed in", () => {
 
     const token = await tokenFor(request, baseURL!, clientId, verifier, (await back).searchParams.get("code")!);
     expect(token.scope.split(" ")).toEqual(expect.arrayContaining(["guildhall:read", "guildhall:write"]));
+
+    const name = `Agent Added ${Date.now()}`;
+    const added = await callTool(request, token.access_token, "add_contact", { name, job_title: "Cabinet maker" });
+    const id = /ID (\S+)\.$/.exec(added)![1];
+    expect(await callTool(request, token.access_token, "log_activity", { record_id: id, kind: "call", text: "Rang about the dresser" }))
+      .toBe(`Logged a call on the contact '${name}'.`);
+    await page.goto(`/contacts/${id}`);
+    await expect(page.getByRole("heading", { name })).toBeVisible(COLD);
+    await expect(page.getByText("Rang about the dresser")).toBeVisible();
   });
 
   test("Don't allow sends the agent away with no code", async ({ page, agent: request, baseURL }) => {

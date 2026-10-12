@@ -1,11 +1,13 @@
 // The endpoint end to end over a test database: what an agent sees when it connects, with and without signing in.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestDb } from "@/test/db";
-import { connectAgent, signUpOwner, testAuth, type TestAuth } from "@/test/agent";
+import { ALL_SCOPES, connectAgent, signUpOwner, testAuth, type TestAuth } from "@/test/agent";
 import type { Db } from "@/lib/db/client";
 import { MCP_RESOURCE } from "@/lib/auth/server";
 import { env } from "@/lib/env";
-import { createContact, EMPTY_CONTACT } from "@/lib/contacts";
+import { createContact, EMPTY_CONTACT, listContacts } from "@/lib/contacts";
+import { createDeal, EMPTY_DEAL, getDeal } from "@/lib/deals";
+import { contact } from "@/lib/db/schema";
 import { mcpEndpoint } from "./endpoint";
 
 let t: { db: Db; close(): Promise<void> };
@@ -40,6 +42,11 @@ async function readOnlyToken() {
   return (await connectAgent(auth, cookie, "openid profile email offline_access guildhall:read")).access_token;
 }
 
+async function changeToken() {
+  const cookie = await signUpOwner(auth);
+  return (await connectAgent(auth, cookie, ALL_SCOPES)).access_token;
+}
+
 describe("the /mcp endpoint without a token", () => {
   it("answers 401 pointing at the protected-resource address", async () => {
     const res = await post("tools/list", {});
@@ -60,13 +67,17 @@ describe("the /mcp endpoint without a token", () => {
 });
 
 describe("the /mcp endpoint with a signed-in agent", () => {
-  it("lists the six read tools, each marked read only with a description", async () => {
+  it("lists the six read tools and the three write tools, none destructive, each with a title and description", async () => {
     const { tools } = await rpc("tools/list", {}, await readOnlyToken());
+    const writes = ["add_contact", "log_activity", "move_deal_stage"];
     expect(tools.map((tool: { name: string }) => tool.name).sort()).toEqual([
-      "get_company", "get_contact", "get_deal", "list_pipeline", "list_tasks_due", "search_contacts",
+      "add_contact", "get_company", "get_contact", "get_deal", "list_pipeline", "list_tasks_due", "log_activity",
+      "move_deal_stage", "search_contacts",
     ]);
     for (const tool of tools) {
-      expect(tool.annotations.readOnlyHint).toBe(true);
+      expect(tool.annotations.readOnlyHint, tool.name).toBe(!writes.includes(tool.name));
+      expect(tool.annotations.destructiveHint, tool.name).toBe(false);
+      expect(tool.title, tool.name).toBeTruthy();
       expect(tool.description).toMatch(/^[A-Z].*\.$/);
     }
   });
@@ -91,5 +102,39 @@ describe("the /mcp endpoint with a signed-in agent", () => {
     const res = await post("tools/list", {}, access_token);
     expect(res.status).toBe(403);
     expect(res.headers.get("www-authenticate")).toContain('error="insufficient_scope"');
+  });
+});
+
+describe("the write tools over /mcp", () => {
+  it("refuses a Read only agent, changing nothing", async () => {
+    const token = await readOnlyToken();
+    const result = await rpc("tools/call", { name: "add_contact", arguments: { name: "Ada Lovelace" } }, token);
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toBe("This agent may only read. Reconnect it and allow changes.");
+    expect(await t.db.select().from(contact)).toHaveLength(0);
+  });
+
+  it("lets a Read and change agent add a contact, log a call and move a deal, each as the owner", async () => {
+    const token = await changeToken();
+    const added = await rpc("tools/call", { name: "add_contact", arguments: { name: "Ada Lovelace", email: "ada@example.com" } }, token);
+    expect(added.isError).toBeFalsy();
+    expect(added.content[0].text).toMatch(/^Added 'Ada Lovelace' to contacts\. ID /);
+    const [ada] = await listContacts(t.db);
+    expect(ada.email).toBe("ada@example.com");
+
+    const dealId = (await createDeal(t.db, { ...EMPTY_DEAL, title: "Acme fit-out", stage: "Proposal", contactId: ada.id })).id!;
+    const logged = await rpc("tools/call", { name: "log_activity", arguments: { record_id: dealId, kind: "call", text: "Rang Ada" } }, token);
+    expect(logged.content[0].text).toBe("Logged a call on the deal 'Acme fit-out'.");
+    const moved = await rpc("tools/call", { name: "move_deal_stage", arguments: { deal_id: dealId, stage: "Won" } }, token);
+    expect(moved.content[0].text).toBe("Moved 'Acme fit-out' from Proposal to Won.");
+    expect((await getDeal(t.db, dealId))!.stage).toBe("Won");
+  });
+
+  it("refuses a stage that isn't one of the five", async () => {
+    const token = await changeToken();
+    const dealId = (await createDeal(t.db, { ...EMPTY_DEAL, title: "Acme fit-out" })).id!;
+    const result = await rpc("tools/call", { name: "move_deal_stage", arguments: { deal_id: dealId, stage: "Closed" } }, token);
+    expect(result.isError).toBe(true);
+    expect((await getDeal(t.db, dealId))!.stage).toBe("New");
   });
 });

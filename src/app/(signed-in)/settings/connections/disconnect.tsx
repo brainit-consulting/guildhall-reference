@@ -18,7 +18,7 @@ export function Disconnect({ agent, person, clientId, userId }: { agent: string;
 
   return (
     <>
-      <Button variant="secondary" onClick={open} className="min-h-11 md:min-h-0" aria-label={`Disconnect ${agent}, connected by ${person}`}>
+      <Button variant="secondary" onClick={open} aria-label={`Disconnect ${agent}, connected by ${person}`}>
         Disconnect
       </Button>
       <dialog
@@ -34,7 +34,7 @@ export function Disconnect({ agent, person, clientId, userId }: { agent: string;
           <input type="hidden" name="clientId" value={clientId} />
           <input type="hidden" name="userId" value={userId} />
           <ConfirmButton />
-          <Button type="button" ref={cancel} variant="secondary" className="min-h-11 md:min-h-0" onClick={() => dialog.current?.close()}>
+          <Button type="button" ref={cancel} variant="secondary" onClick={() => dialog.current?.close()}>
             Cancel
           </Button>
         </form>
@@ -45,5 +45,5 @@ export function Disconnect({ agent, person, clientId, userId }: { agent: string;
 
 function ConfirmButton() {
   const { pending } = useFormStatus();
-  return <Button type="submit" variant="danger" className="min-h-11 md:min-h-0" disabled={pending}>Disconnect</Button>;
+  return <Button type="submit" variant="danger" disabled={pending}>Disconnect</Button>;
 }

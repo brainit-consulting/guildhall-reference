@@ -19,6 +19,6 @@ describe("parseAddress", () => {
 
   it("refuses a line too long to print", () => {
     expect(parseAddress("x".repeat(MAX_ADDRESS_LINE)).error).toBeNull();
-    expect(parseAddress("x".repeat(MAX_ADDRESS_LINE + 1)).error).toMatch(/^Keep each line under 80 characters/);
+    expect(parseAddress("x".repeat(MAX_ADDRESS_LINE + 1)).error).toMatch(/^Keep each line to 80 characters or fewer/);
   });
 });

@@ -46,6 +46,8 @@ type LineValues = LineInput;
 type InvoiceValues = { clientId: string; projectId: string | null; issueOn: string; dueOn: string; lines: LineValues[] };
 
 export const MAX_LINES = 50;
+// Two lines on the PDF, so 15 lines still fit one A4 page.
+export const MAX_DESCRIPTION = 100;
 export const PICK_CLIENT = "Pick a client.";
 export const NOT_THEIR_PROJECT = "Pick one of this client's projects, or no project.";
 export const DUE_BEFORE_ISSUE = "The due date can't be before the issue date.";
@@ -78,6 +80,9 @@ export function checkInvoice(input: InvoiceInput): { values: InvoiceValues; erro
     const e: LineErrors = {};
     const description = l.description.trim();
     if (!description) e.description = "Enter what this line is for.";
+    else if (description.length > MAX_DESCRIPTION) {
+      e.description = `Keep the description to ${MAX_DESCRIPTION} characters or fewer; it has ${description.length}.`;
+    }
     const quantity = parseQuantity(l.quantity);
     if (quantity.error) e.quantity = quantity.error;
     const price = l.unitPrice.trim() ? parseMoney(l.unitPrice) : { value: null, error: "Enter a unit price, like 85.00." };

@@ -6,8 +6,11 @@ import type { Db } from "@/lib/db/client";
 import { makeClient } from "@/lib/clients";
 import { createCompany, EMPTY_COMPANY } from "@/lib/companies";
 import { createDeal, EMPTY_DEAL } from "@/lib/deals";
-import { advanceInvoice, createInvoice, deleteInvoice, formatInvoiceNumber, getInvoice, type InvoiceInput } from "@/lib/invoices";
-import { getBusinessAddress, getTaxRate, setBusinessAddress, setTaxRate } from "@/lib/settings";
+import {
+  advanceInvoice, createInvoice, deleteInvoice, formatInvoiceNumber, getInvoice, MAX_DESCRIPTION, type InvoiceInput,
+} from "@/lib/invoices";
+import { createProject } from "@/lib/projects";
+import { getBusinessAddress, getTaxRate, MAX_ADDRESS_LINE, MAX_ADDRESS_LINES, setBusinessAddress, setTaxRate } from "@/lib/settings";
 import { renderInvoicePdf } from "./invoice-pdf";
 
 const holder = vi.hoisted(() => ({ db: null as unknown as Db }));
@@ -65,6 +68,32 @@ describe("the address in Settings", () => {
     expect(await setBusinessAddress(t.db, "")).toEqual({ value: "", error: null });
     expect(await getBusinessAddress(t.db)).toBe("");
   });
+});
+
+// Text of exactly `n` characters, ending in a letter: ordinary words, or the widest letters there are.
+const PROSE = "Oak shelf, planed and oiled, fitted to the alcove left of the chimney breast, with brass brackets and ";
+const text = (n: number, wide: boolean) => (wide ? "MW ".repeat(n) : PROSE.repeat(Math.ceil(n / PROSE.length) + 1)).slice(0, n - 1) + "x";
+
+describe("one A4 page for 15 lines, whatever the forms accept", () => {
+  for (const wide of [false, true]) {
+    it(`fits the most of everything, as ${wide ? "the widest letters" : "ordinary words"}, as a Draft, Sent and Paid`, async () => {
+      await setTaxRate(t.db, "15");
+      const address = Array.from({ length: MAX_ADDRESS_LINES }, () => text(MAX_ADDRESS_LINE, wide)).join("\n");
+      expect((await setBusinessAddress(t.db, address)).error).toBeNull();
+      // names have no limit in the forms; the PDF gives each two lines. Amounts are big for a joiner: $99,974,990.00 a line.
+      const clientId = await newClient(text(300, wide));
+      const projectId = (await createProject(t.db, { name: text(300, wide), clientId, budget: "4500", startOn: "2026-10-01", endOn: "2026-12-01" })).id!;
+      const lines = Array.from({ length: 15 }, () => ({ description: text(MAX_DESCRIPTION, wide), quantity: "999.75", unitPrice: "99999.99" }));
+      const saved = await createInvoice(t.db, { clientId, projectId, issueOn: "2026-10-12", dueOn: "2026-11-11", lines });
+      if (saved.errors) throw new Error(JSON.stringify(saved.errors));
+
+      for (const step of [null, "Sent", "Paid"] as const) {
+        if (step) expect(await advanceInvoice(t.db, saved.id, step)).toBe(true);
+        const pdf = (await renderInvoicePdf(t.db, saved.id))!.pdf;
+        expect(pages(pdf), `${step ?? "Draft"}`).toBe(1);
+      }
+    });
+  }
 });
 
 describe("GET /invoices/[id]/pdf", () => {

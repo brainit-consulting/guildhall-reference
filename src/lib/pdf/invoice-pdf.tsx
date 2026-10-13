@@ -40,29 +40,38 @@ const RULE = "#D9CFBD";
 const ACCENT = readableShade(BRAND_COLOUR, [WHITE, PANEL]);
 
 const s = StyleSheet.create({
-  page: { paddingTop: 40, paddingBottom: 56, paddingHorizontal: 48, fontFamily: "IBM Plex Sans", fontSize: 10, color: INK, backgroundColor: WHITE },
+  page: { paddingTop: 36, paddingBottom: 48, paddingHorizontal: 48, fontFamily: "IBM Plex Sans", fontSize: 10, color: INK, backgroundColor: WHITE },
+  // Every text that can grow has a line limit (maxLines), so one A4 page holds the most the forms accept: 15 lines of
+  // 100 characters, a 6-line address, long client and project names. The limits are wide enough that ordinary text
+  // never reaches them; only freakishly wide text (a line of capital Ws) would be cut short, with an ellipsis.
   head: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  business: { flexDirection: "row", alignItems: "flex-start", maxWidth: 300 },
-  name: { fontFamily: "Young Serif", fontSize: 16, lineHeight: 1.2 },
-  address: { marginTop: 4, color: MUTED, fontSize: 9, lineHeight: 1.4 },
-  title: { fontFamily: "Young Serif", fontSize: 24, textAlign: "right" },
-  number: { marginTop: 2, fontSize: 12, fontWeight: 500, textAlign: "right" },
-  status: { marginTop: 6, alignSelf: "flex-end", borderWidth: 1, borderColor: ACCENT, color: ACCENT, paddingVertical: 2, paddingHorizontal: 6, fontWeight: 500, fontSize: 10 },
-  details: { marginTop: 20, flexDirection: "row", borderTopWidth: 0.75, borderTopColor: RULE },
-  detail: { flexDirection: "row", borderBottomWidth: 0.75, borderBottomColor: RULE, paddingVertical: 5 },
+  business: { flex: 1, paddingRight: 16 },
+  brand: { flexDirection: "row", alignItems: "center" },
+  name: { fontFamily: "Young Serif", fontSize: 16, lineHeight: 1.2, maxLines: 2, textOverflow: "ellipsis" },
+  address: { marginTop: 4, color: MUTED, fontSize: 8, lineHeight: 1.3 },
+  addressLine: { maxLines: 1, textOverflow: "ellipsis" },
+  numbering: { width: 130, alignItems: "flex-end" },
+  title: { fontFamily: "Young Serif", fontSize: 24 },
+  numberRow: { marginTop: 2, flexDirection: "row", alignItems: "center" },
+  number: { fontSize: 12, fontWeight: 500 },
+  status: { marginRight: 6, borderWidth: 1, borderColor: ACCENT, color: ACCENT, paddingVertical: 1, paddingHorizontal: 5, fontWeight: 500, fontSize: 9 },
+  details: { marginTop: 12, flexDirection: "row", borderTopWidth: 0.75, borderTopColor: RULE },
+  detail: { flexDirection: "row", borderBottomWidth: 0.75, borderBottomColor: RULE, paddingVertical: 3 },
   label: { width: 64, color: MUTED, fontSize: 9, paddingTop: 1 },
-  table: { marginTop: 16, fontSize: 9.5, lineHeight: 1.25 },
+  detailText: { flex: 1, maxLines: 2, textOverflow: "ellipsis" },
+  table: { marginTop: 10, fontSize: 9, lineHeight: 1.2 },
   row: { flexDirection: "row", borderBottomWidth: 0.75, borderBottomColor: RULE },
   headRow: { backgroundColor: PANEL, color: MUTED, fontSize: 9, fontWeight: 500 },
-  cell: { paddingVertical: 3.5, paddingHorizontal: 6 },
+  cell: { paddingVertical: 2.5, paddingHorizontal: 6 },
   description: { flex: 1 },
-  quantity: { width: 52, textAlign: "right" },
-  money: { width: 76, textAlign: "right" },
-  totals: { marginTop: 8, marginLeft: "auto", width: 230 },
-  total: { flexDirection: "row", justifyContent: "space-between", borderBottomWidth: 0.75, borderBottomColor: RULE, paddingVertical: 5, paddingHorizontal: 6 },
+  descriptionText: { maxLines: 2, textOverflow: "ellipsis" },
+  quantity: { width: 48, textAlign: "right" },
+  money: { width: 80, textAlign: "right" },
+  totals: { marginTop: 6, marginLeft: "auto", width: 230 },
+  total: { flexDirection: "row", justifyContent: "space-between", borderBottomWidth: 0.75, borderBottomColor: RULE, paddingVertical: 3.5, paddingHorizontal: 6 },
   grand: { borderTopWidth: 1, borderTopColor: INK, fontWeight: 500, fontSize: 11 },
   // in the bottom margin, so it never pushes the totals onto a second page
-  note: { position: "absolute", bottom: 28, left: 48, right: 48, color: MUTED, fontSize: 9 },
+  note: { position: "absolute", bottom: 22, left: 48, right: 48, color: MUTED, fontSize: 9 },
 });
 
 const SHAPE = { rect: Rect, circle: Circle, ellipse: Ellipse, line: Line, polygon: Polygon, polyline: Polyline, path: Path };
@@ -94,17 +103,24 @@ export function InvoiceDocument({ invoice: i, address, logo }: InvoicePdfProps) 
       <Page size="A4" style={s.page}>
         <View style={s.head}>
           <View style={s.business}>
-            {logo && <LogoMark logo={logo} />}
-            <View>
-              <Text style={s.name}>{BUSINESS_NAME}</Text>
-              {address && <Text style={s.address}>{address}</Text>}
+            <View style={s.brand}>
+              {logo && <LogoMark logo={logo} />}
+              <Text style={[s.name, { flex: 1 }]}>{BUSINESS_NAME}</Text>
             </View>
+            {/* under the logo too, so an 80-character line has the width it needs */}
+            {address && (
+              <View style={s.address}>
+                {address.split("\n").map((line, n) => <Text key={n} style={s.addressLine}>{line}</Text>)}
+              </View>
+            )}
           </View>
-          <View>
+          <View style={s.numbering}>
             <Text style={s.title}>Invoice</Text>
-            <Text style={s.number}>{number}</Text>
-            {/* Sent is what an invoice normally is; Draft and Paid are worth saying on the page */}
-            {i.status !== "Sent" && <Text style={s.status}>{i.status}</Text>}
+            <View style={s.numberRow}>
+              {/* Sent is what an invoice normally is; Draft and Paid are worth saying, beside the number */}
+              {i.status !== "Sent" && <Text style={s.status}>{i.status}</Text>}
+              <Text style={s.number}>{number}</Text>
+            </View>
           </View>
         </View>
 
@@ -112,12 +128,12 @@ export function InvoiceDocument({ invoice: i, address, logo }: InvoicePdfProps) 
           <View style={{ flex: 1, paddingRight: 24 }}>
             <View style={s.detail}>
               <Text style={s.label}>Bill to</Text>
-              <Text style={{ flex: 1 }}>{i.clientName}</Text>
+              <Text style={s.detailText}>{i.clientName}</Text>
             </View>
             {i.projectName && (
               <View style={s.detail}>
                 <Text style={s.label}>Project</Text>
-                <Text style={{ flex: 1 }}>{i.projectName}</Text>
+                <Text style={s.detailText}>{i.projectName}</Text>
               </View>
             )}
           </View>
@@ -142,7 +158,7 @@ export function InvoiceDocument({ invoice: i, address, logo }: InvoicePdfProps) 
           </View>
           {i.lines.map((l, n) => (
             <View key={n} style={s.row} wrap={false}>
-              <Text style={[s.cell, s.description]}>{l.description}</Text>
+              <View style={[s.cell, s.description]}><Text style={s.descriptionText}>{l.description}</Text></View>
               <Text style={[s.cell, s.quantity]}>{formatQuantity(l.quantity)}</Text>
               <Text style={[s.cell, s.money]}>{formatMoney(l.unitPrice)}</Text>
               <Text style={[s.cell, s.money]}>{formatMoney(i.totals.lines[n])}</Text>

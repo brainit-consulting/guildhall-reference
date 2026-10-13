@@ -51,6 +51,13 @@ attachment; the address is a new column on `business_settings`, set in Settings.
 - An SVG logo is drawn from its rect, circle, ellipse, line, polygon, polyline and path elements; one using anything
   else (gradients, text, transforms, embedded images) is left off the PDF rather than drawn wrong. A PNG or JPEG logo
   always works.
-- One page for 15 lines is tested with descriptions that wrap to two lines (about 85 characters each); longer ones
-  spill onto a second page. Rows never split across pages; the header row isn't repeated there.
+- One page for 15 lines holds for everything the forms accept (QA round 1 found a long project name or a 6-line
+  address pushed the totals over). A line's description is now at most 100 characters (`checkInvoice`), and every
+  text that can grow has a line limit in the PDF: descriptions and client and project names two lines, each address
+  line one. Ordinary text at those limits prints whole; only freakishly wide text (rows of capital Ms and Ws) is cut
+  short with an ellipsis. The status label sits beside the number. The integration test renders the worst case
+  (15 x 100-character lines, 6 x 80-character address lines, 300-character client and project names) in ordinary
+  and widest letters, as Draft, Sent and Paid, and asserts one page each.
+- Amount columns fit up to about $999,999,999.99 a line; the forms accept absurdly larger quantity x price products
+  (up to 10^20), which would overrun their column.
 - The pay-by line sits in the bottom margin, so it never pushes the totals over. Paid invoices say "Paid in full."

@@ -27,7 +27,7 @@ export function parseAddress(typed: string): { value: string; error: null } | { 
   const lines = typed.split(/\r?\n/).map((l) => l.trim().replace(/\s+/g, " ")).filter(Boolean);
   if (lines.length > MAX_ADDRESS_LINES) return { value: null, error: `Fit the address on ${MAX_ADDRESS_LINES} lines or fewer.` };
   if (lines.some((l) => l.length > MAX_ADDRESS_LINE)) {
-    return { value: null, error: `Keep each line under ${MAX_ADDRESS_LINE} characters; press Enter to start a new line.` };
+    return { value: null, error: `Keep each line to ${MAX_ADDRESS_LINE} characters or fewer; press Enter to start a new line.` };
   }
   return { value: lines.join("\n"), error: null };
 }

@@ -396,15 +396,15 @@ export const agentLog = pgTable("agent_log", {
   tool: text("tool").notNull(),
   // the one line the tool answered
   summary: text("summary").notNull(),
-  // the contact, company or deal the change touched
-  recordType: text("record_type").$type<"contact" | "company" | "deal">(),
+  // the contact, company, deal or invoice the change touched
+  recordType: text("record_type").$type<"contact" | "company" | "deal" | "invoice">(),
   recordId: uuid("record_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (t) => [
   index("agent_log_created_at").on(t.createdAt),
   index("agent_log_client_id").on(t.clientId, t.createdAt),
   check("agent_log_record", sql`(${t.recordType} is null) = (${t.recordId} is null)`),
-  check("agent_log_record_type", sql`${t.recordType} in ('contact', 'company', 'deal')`),
+  check("agent_log_record_type", sql`${t.recordType} in ('contact', 'company', 'deal', 'invoice')`),
 ]);
 
 // I9: when each connection (an agent, for one person) last called /mcp, for /settings/connections. The connection

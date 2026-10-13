@@ -59,7 +59,7 @@ export function mcpEndpoint(opts: { auth: AgentAuth; resource: string; db: () =>
     };
     handler ??= createMcpHandler(({ authInfo }) => createGuildhallServer(
       opts.db(), authInfo?.extra?.person as Person, authInfo?.extra?.client as LoggedAgent,
-      authInfo?.scopes.includes(WRITE_SCOPE) ?? false,
+      authInfo?.scopes.includes(WRITE_SCOPE) ?? false, new URL(opts.resource).origin,
     ));
     return handler.fetch(request, { authInfo });
   }, {

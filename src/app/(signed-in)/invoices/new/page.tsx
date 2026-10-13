@@ -3,15 +3,12 @@ import { requireSession } from "@/lib/auth/session";
 import { listClients } from "@/lib/clients";
 import { addDays, TIME_ZONE, todayIn } from "@/lib/dates";
 import { db } from "@/lib/db/client";
-import { listProjectChoices } from "@/lib/invoices";
+import { listProjectChoices, PAYMENT_DAYS } from "@/lib/invoices";
 import { getTaxRate } from "@/lib/settings";
 import { createInvoiceAction } from "../actions";
 import { InvoiceForm } from "../invoice-form";
 
 export const metadata: Metadata = { title: "New invoice" };
-
-// Days from issue to due on a new invoice; the form can change it.
-const PAYMENT_DAYS = 30;
 
 const first = (v?: string | string[]) => (Array.isArray(v) ? v[0] : v);
 

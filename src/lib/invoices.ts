@@ -46,6 +46,8 @@ type LineValues = LineInput;
 type InvoiceValues = { clientId: string; projectId: string | null; issueOn: string; dueOn: string; lines: LineValues[] };
 
 export const MAX_LINES = 50;
+// Days from issue to due on a new invoice, unless a due date is given.
+export const PAYMENT_DAYS = 30;
 // Two lines on the PDF, so 15 lines still fit one A4 page.
 export const MAX_DESCRIPTION = 100;
 export const PICK_CLIENT = "Pick a client.";
@@ -213,6 +215,13 @@ export async function listInvoices(db: Db, filter: { clientId?: string; projectI
   const rows = await selectInvoices(db, where).orderBy(desc(invoice.number));
   const lines = await linesOf(db, rows.map((r) => r.id));
   return rows.map((r) => ({ ...r, totals: invoiceTotals(lines.get(r.id)!, r.taxRate) }));
+}
+
+// The invoice with this number, as an agent quotes it; null for none.
+export async function getInvoiceIdByNumber(db: Db, number: number): Promise<string | null> {
+  if (!Number.isSafeInteger(number) || number < 1 || number > 2_147_483_647) return null;
+  const [found] = await db.select({ id: invoice.id }).from(invoice).where(eq(invoice.number, number)).limit(1);
+  return found?.id ?? null;
 }
 
 export async function getInvoice(db: Db, id: string): Promise<InvoiceDetails | null> {

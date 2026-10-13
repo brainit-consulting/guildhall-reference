@@ -7,7 +7,9 @@ import { MCP_RESOURCE } from "@/lib/auth/server";
 import { env } from "@/lib/env";
 import { createContact, EMPTY_CONTACT, listContacts } from "@/lib/contacts";
 import { createDeal, EMPTY_DEAL, getDeal } from "@/lib/deals";
-import { agentLog, contact } from "@/lib/db/schema";
+import { agentLog, contact, invoice } from "@/lib/db/schema";
+import { makeClient } from "@/lib/clients";
+import { createCompany, EMPTY_COMPANY } from "@/lib/companies";
 import { mcpEndpoint } from "./endpoint";
 
 let t: { db: Db; close(): Promise<void> };
@@ -67,12 +69,12 @@ describe("the /mcp endpoint without a token", () => {
 });
 
 describe("the /mcp endpoint with a signed-in agent", () => {
-  it("lists the six read tools and the three write tools, none destructive, each with a title and description", async () => {
+  it("lists the nine read tools and the four write tools, none destructive, each with a title and description", async () => {
     const { tools } = await rpc("tools/list", {}, await readOnlyToken());
-    const writes = ["add_contact", "log_activity", "move_deal_stage"];
+    const writes = ["add_contact", "create_invoice_draft", "log_activity", "move_deal_stage"];
     expect(tools.map((tool: { name: string }) => tool.name).sort()).toEqual([
-      "add_contact", "get_company", "get_contact", "get_deal", "list_pipeline", "list_tasks_due", "log_activity",
-      "move_deal_stage", "search_contacts",
+      "add_contact", "create_invoice_draft", "get_company", "get_contact", "get_deal", "get_invoice", "list_clients",
+      "list_pipeline", "list_projects", "list_tasks_due", "log_activity", "move_deal_stage", "search_contacts",
     ]);
     for (const tool of tools) {
       expect(tool.annotations.readOnlyHint, tool.name).toBe(!writes.includes(tool.name));
@@ -135,6 +137,34 @@ describe("the write tools over /mcp", () => {
     const log = await t.db.select().from(agentLog);
     expect(log.map((e) => e.tool).sort()).toEqual(["add_contact", "log_activity", "move_deal_stage"]);
     for (const entry of log) expect(entry).toMatchObject({ agentName: "MCP Inspector", userId: expect.any(String) });
+  });
+
+  it("drafts an invoice for a client found with list_clients, answering the page's address on this app", async () => {
+    const token = await changeToken();
+    const companyId = (await createCompany(t.db, { ...EMPTY_COMPANY, name: "Acme" })).id!;
+    const dealId = (await createDeal(t.db, { ...EMPTY_DEAL, title: "Acme fit-out", stage: "Won", companyId })).id!;
+    await makeClient(t.db, dealId);
+    const clients = await rpc("tools/call", { name: "list_clients", arguments: { query: "acme" } }, token);
+    const [acme] = JSON.parse(clients.content[0].text);
+    const drafted = await rpc("tools/call", {
+      name: "create_invoice_draft",
+      arguments: { client_id: acme.id, lines: [{ description: "March work, hours", quantity: 10, unit_price: 85 }] },
+    }, token);
+    expect(drafted.isError).toBeFalsy();
+    const [made] = await t.db.select().from(invoice);
+    expect(made.status).toBe("Draft");
+    expect(drafted.content[0].text).toContain(`${env.authUrl}/invoices/${made.id}`);
+
+    const read = await rpc("tools/call", { name: "get_invoice", arguments: { id_or_number: "INV-0001" } }, token);
+    expect(JSON.parse(read.content[0].text)).toMatchObject({ id: made.id, status: "Draft", total: { formatted: "$850.00" } });
+    expect(await t.db.select({ tool: agentLog.tool, recordType: agentLog.recordType }).from(agentLog))
+      .toEqual([{ tool: "create_invoice_draft", recordType: "invoice" }]);
+  });
+
+  it("says plainly when an invoice number matches nothing", async () => {
+    const result = await rpc("tools/call", { name: "get_invoice", arguments: { id_or_number: "INV-0099" } }, await readOnlyToken());
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toBe("No invoice has that ID or number. Invoices are numbered like INV-0007.");
   });
 
   it("refuses a stage that isn't one of the five", async () => {

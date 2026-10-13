@@ -1,0 +1,1 @@
+ALTER TABLE "business_settings" ADD COLUMN "address" text DEFAULT '' NOT NULL;

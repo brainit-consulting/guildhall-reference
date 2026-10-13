@@ -444,6 +444,8 @@ export const businessSettings = pgTable("business_settings", {
   id: integer("id").primaryKey().default(1),
   // a percentage: "15.00" is 15%; copied onto each invoice when it's made
   taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull().default("0"),
+  // I11: printed under the business name on invoice PDFs; one line per line of text, "" until set
+  address: text("address").notNull().default(""),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => [
   check("business_settings_one_row", sql`${t.id} = 1`),

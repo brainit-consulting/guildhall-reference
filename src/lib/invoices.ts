@@ -21,6 +21,11 @@ export function formatInvoiceNumber(n: number): string {
   return `INV-${String(n).padStart(4, "0")}`;
 }
 
+// The PDF saves as "INV-0001.pdf": the number the client quotes back is the name they file it under.
+export function invoicePdfFileName(n: number): string {
+  return `${formatInvoiceNumber(n)}.pdf`;
+}
+
 // Overdue: sent, not paid, and its due day has gone by. A Draft isn't owed yet; a Paid one isn't owed at all. Both
 // days are YYYY-MM-DD, which compare correctly as text.
 export function isOverdue(i: { status: InvoiceStatus; dueOn: string }, today: string): boolean {
@@ -41,6 +46,8 @@ type LineValues = LineInput;
 type InvoiceValues = { clientId: string; projectId: string | null; issueOn: string; dueOn: string; lines: LineValues[] };
 
 export const MAX_LINES = 50;
+// Two lines on the PDF, so 15 lines still fit one A4 page.
+export const MAX_DESCRIPTION = 100;
 export const PICK_CLIENT = "Pick a client.";
 export const NOT_THEIR_PROJECT = "Pick one of this client's projects, or no project.";
 export const DUE_BEFORE_ISSUE = "The due date can't be before the issue date.";
@@ -73,6 +80,9 @@ export function checkInvoice(input: InvoiceInput): { values: InvoiceValues; erro
     const e: LineErrors = {};
     const description = l.description.trim();
     if (!description) e.description = "Enter what this line is for.";
+    else if (description.length > MAX_DESCRIPTION) {
+      e.description = `Keep the description to ${MAX_DESCRIPTION} characters or fewer; it has ${description.length}.`;
+    }
     const quantity = parseQuantity(l.quantity);
     if (quantity.error) e.quantity = quantity.error;
     const price = l.unitPrice.trim() ? parseMoney(l.unitPrice) : { value: null, error: "Enter a unit price, like 85.00." };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  checkInvoice, DUE_BEFORE_ISSUE, formatInvoiceNumber, isOverdue, MAX_LINES, NO_LINES, PICK_CLIENT, type InvoiceInput,
+  checkInvoice, DUE_BEFORE_ISSUE, formatInvoiceNumber, invoicePdfFileName, isOverdue, MAX_DESCRIPTION, MAX_LINES, NO_LINES, PICK_CLIENT, type InvoiceInput,
 } from "./invoices";
 
 const CLIENT = "6f1c2a3e-1d2b-4c5d-8e9f-0a1b2c3d4e5f";
@@ -14,6 +14,14 @@ describe("formatInvoiceNumber", () => {
     expect(formatInvoiceNumber(1)).toBe("INV-0001");
     expect(formatInvoiceNumber(42)).toBe("INV-0042");
     expect(formatInvoiceNumber(10000)).toBe("INV-10000");
+  });
+});
+
+describe("invoicePdfFileName", () => {
+  it("is the invoice number with .pdf", () => {
+    expect(invoicePdfFileName(1)).toBe("INV-0001.pdf");
+    expect(invoicePdfFileName(123)).toBe("INV-0123.pdf");
+    expect(invoicePdfFileName(10000)).toBe("INV-10000.pdf");
   });
 });
 
@@ -68,5 +76,13 @@ describe("checkInvoice", () => {
     const line = { description: "Hour", quantity: "1", unitPrice: "85" };
     expect(checkInvoice(input({ lines: Array(MAX_LINES).fill(line) })).errors).toBeNull();
     expect(checkInvoice(input({ lines: Array(MAX_LINES + 1).fill(line) })).errors?.lines).toMatch(/at most 50 lines/);
+  });
+
+  it("takes a description of up to 100 characters, counted after trimming, so it prints on two lines", () => {
+    const line = (description: string) => ({ description, quantity: "1", unitPrice: "85" });
+    expect(checkInvoice(input({ lines: [line(` ${"x".repeat(MAX_DESCRIPTION)} `)] })).errors).toBeNull();
+    expect(checkInvoice(input({ lines: [line("x".repeat(MAX_DESCRIPTION + 1))] })).errors).toEqual({
+      line: { 0: { description: "Keep the description to 100 characters or fewer; it has 101." } },
+    });
   });
 });

@@ -1,6 +1,6 @@
 # 042 — Invoicing through the agent
 
-**Status:** in-progress
+**Status:** done
 **Owner:** Aldric the Smith
 **Last updated:** 2026-10-12
 
@@ -26,29 +26,29 @@ check), and links it on /settings/agent-log.
 
 ### Task 1: Agent log takes invoices
 
-- [ ] **Step 1:** `agent_log.record_type` allows `invoice`; new migration.
-- [ ] **Step 2:** `listAgentLog` names an invoice by its number; the log page links it.
+- [x] **Step 1:** `agent_log.record_type` allows `invoice`; new migration.
+- [x] **Step 2:** `listAgentLog` names an invoice by its number; the log page links it.
 
 ### Task 2: Read tools
 
-- [ ] **Step 1:** `listClientsFor(query?)`, `listProjectsFor(client_id?, status?)`, `getInvoiceRecord(id_or_number)`.
-- [ ] **Step 2:** Integration tests, including that they write nothing.
+- [x] **Step 1:** `listClientsFor(query?)`, `listProjectsFor(client_id?, status?)`, `getInvoiceRecord(id_or_number)`.
+- [x] **Step 2:** Integration tests, including that they write nothing.
 
 ### Task 3: The write tool
 
-- [ ] **Step 1:** `createInvoiceDraft`: refuses a read-only agent, sentences for bad input, always a Draft, logged.
-- [ ] **Step 2:** Registered in `server.ts`; the endpoint hands the server its address.
-- [ ] **Step 3:** Integration tests, and the endpoint test's tool list.
+- [x] **Step 1:** `createInvoiceDraft`: refuses a read-only agent, sentences for bad input, always a Draft, logged.
+- [x] **Step 2:** Registered in `server.ts`; the endpoint hands the server its address.
+- [x] **Step 3:** Integration tests, and the endpoint test's tool list.
 
 ### Task 4: Try it
 
-- [ ] **Step 1:** Call the tools on the running app: 10 hours of March work at 85 an hour for Acme; open the Draft.
+- [x] **Step 1:** Call the tools on the running app: 10 hours of March work at 85 an hour for Acme; open the Draft.
 
 ## Acceptance
 
-- [ ] "Invoice Acme for 10 hours of March work at 85 an hour" makes a Draft for $850.00 plus tax that opens.
-- [ ] The Draft shows in the agent log, linked to the invoice.
-- [ ] typecheck, lint, test, test:e2e, build pass.
+- [x] "Invoice Acme for 10 hours of March work at 85 an hour" makes a Draft for $850.00 plus tax that opens.
+- [x] The Draft shows in the agent log, linked to the invoice.
+- [x] typecheck, lint, test, test:e2e, build pass.
 
 ## Risks / open questions
 

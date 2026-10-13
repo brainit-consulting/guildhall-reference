@@ -130,7 +130,7 @@ describe("create_invoice_draft", () => {
     expect(result.ok).toBe(true);
     const id = result.ok ? result.id! : "";
     expect(result.text).toBe(
-      "Drafted INV-0001 for 'Acme Joinery': $850.00 plus $127.50 tax, $977.50 in all, due 2026-11-11. "
+      "Drafted INV-0001 for 'Acme Joinery': $850.00 plus $127.50 tax, $977.50 in all, due 11 Nov 2026. "
       + `It is a Draft: the owner checks it and sends it at ${APP}/invoices/${id}. ID ${id}.`,
     );
 
@@ -145,7 +145,7 @@ describe("create_invoice_draft", () => {
     const [entry] = (await listAgentLog(t.db)).entries;
     expect(entry).toMatchObject({
       agentName: "Claude", person: "Margery Kempe", tool: "create_invoice_draft",
-      summary: "Drafted INV-0001 for 'Acme Joinery': $850.00 plus $127.50 tax, $977.50 in all, due 2026-11-11.",
+      summary: "Drafted INV-0001 for 'Acme Joinery': $850.00 plus $127.50 tax, $977.50 in all, due 11 Nov 2026.",
       record: { type: "invoice", id, name: "INV-0001" },
     });
   });
@@ -156,7 +156,7 @@ describe("create_invoice_draft", () => {
       client_id: acme, due_date: "2026-10-31",
       lines: [{ description: "Oak shelves", quantity: "3", unit_price: "$120.50" }, { description: "Fitting", quantity: "1.5", unit_price: "85" }],
     }, APP, NOW);
-    expect(result.text).toMatch(/^Drafted INV-0001 for 'Acme Joinery': \$489\.00 plus \$0\.00 tax, \$489\.00 in all, due 2026-10-31\. /);
+    expect(result.text).toMatch(/^Drafted INV-0001 for 'Acme Joinery': \$489\.00 plus \$0\.00 tax, \$489\.00 in all, due 31 Oct 2026. /);
     const [row] = await t.db.select().from(invoice);
     expect(row).toMatchObject({ status: "Draft", projectId: null, dueOn: "2026-10-31" });
   });

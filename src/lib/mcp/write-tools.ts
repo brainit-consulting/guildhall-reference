@@ -10,7 +10,7 @@ import { logActivity, type ActivityTarget } from "@/lib/activities";
 import { recordAgentChange, type LoggedAgent, type LoggedRecord } from "@/lib/agent-log";
 import { normaliseEmail } from "@/lib/access";
 import { checkContact, EMPTY_CONTACT } from "@/lib/contacts";
-import { addDays, TIME_ZONE, todayIn } from "@/lib/dates";
+import { addDays, formatDay, TIME_ZONE, todayIn } from "@/lib/dates";
 import { moveDealStage } from "@/lib/deals";
 import type { DealStage } from "@/lib/deal-stages";
 import { findOrAddCompany } from "@/lib/enquiries";
@@ -158,7 +158,7 @@ export async function createInvoiceDraft(
   const { subtotal, tax, total } = made.totals;
   return changed(db, agent, {
     tool: "create_invoice_draft", touched: { type: "invoice", id: made.id },
-    summary: `Drafted ${number} for '${made.clientName}': ${formatMoney(subtotal)} plus ${formatMoney(tax)} tax, ${formatMoney(total)} in all, due ${made.dueOn}.`,
+    summary: `Drafted ${number} for '${made.clientName}': ${formatMoney(subtotal)} plus ${formatMoney(tax)} tax, ${formatMoney(total)} in all, due ${formatDay(made.dueOn)}.`,
     id: made.id,
     forAgent: `It is a Draft: the owner checks it and sends it at ${invoicePage(appUrl, made.id)}. ID ${made.id}.`,
   });

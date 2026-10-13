@@ -10,8 +10,8 @@ import { LocalTime } from "./local-time";
 export const metadata: Metadata = { title: "Agent log" };
 
 const PATH = "/settings/agent-log";
-const PAGES = { contact: "contacts", company: "companies", deal: "deals" } as const;
-const KINDS = { contact: "Contact", company: "Company", deal: "Deal" } as const;
+const PAGES = { contact: "contacts", company: "companies", deal: "deals", invoice: "invoices" } as const;
+const KINDS = { contact: "Contact", company: "Company", deal: "Deal", invoice: "Invoice" } as const;
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 

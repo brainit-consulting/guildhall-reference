@@ -4,7 +4,8 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import type { Db } from "@/lib/db/client";
 import type { ActivityTarget } from "@/lib/activities";
-import { agentLog, company, contact, deal, user } from "@/lib/db/schema";
+import { formatInvoiceNumber } from "@/lib/invoices";
+import { agentLog, company, contact, deal, invoice, user } from "@/lib/db/schema";
 
 export const AGENT_LOG_PAGE_SIZE = 50;
 // Far beyond any real log, and small enough that its OFFSET fits Postgres's bigint.
@@ -20,7 +21,10 @@ export function readPage(asked: number | string | undefined): number {
 // The agent as its token names it: its OAuth client and the name it registered with.
 export type LoggedAgent = { clientId: string; name: string };
 
-export type AgentChange = { userId: string; tool: string; summary: string; touched: ActivityTarget };
+// What a change touched: a record with a timeline, or an invoice an agent drafted.
+export type LoggedRecord = ActivityTarget | { type: "invoice"; id: string };
+
+export type AgentChange = { userId: string; tool: string; summary: string; touched: LoggedRecord };
 
 export async function recordAgentChange(db: Db, agent: LoggedAgent, change: AgentChange): Promise<void> {
   await db.insert(agentLog).values({
@@ -29,10 +33,10 @@ export async function recordAgentChange(db: Db, agent: LoggedAgent, change: Agen
   });
 }
 
-// `record` is null once the contact, company or deal is gone, so the page links only to records still there.
+// `record` is null once the contact, company, deal or invoice is gone, so the page links only to records still there.
 export type AgentLogEntry = {
   id: string; agentName: string; person: string | null; tool: string; summary: string; createdAt: Date;
-  record: (ActivityTarget & { name: string }) | null;
+  record: (LoggedRecord & { name: string }) | null;
 };
 
 // One page (from 1) of the log, newest first, of one agent's entries when `clientId` is given. `more`: an older page
@@ -41,26 +45,29 @@ export async function listAgentLog(
   db: Db, opts: { page?: number; clientId?: string | null } = {},
 ): Promise<{ entries: AgentLogEntry[]; more: boolean }> {
   const page = readPage(opts.page);
-  const on = (type: ActivityTarget["type"], id: AnyPgColumn) =>
+  const on = (type: LoggedRecord["type"], id: AnyPgColumn) =>
     and(eq(agentLog.recordType, type), eq(agentLog.recordId, id));
   const rows = await db.select({
     id: agentLog.id, agentName: agentLog.agentName, person: user.name, tool: agentLog.tool, summary: agentLog.summary,
     createdAt: agentLog.createdAt, recordType: agentLog.recordType, recordId: agentLog.recordId,
     recordName: sql<string | null>`coalesce(${contact.name}, ${company.name}, ${deal.title})`,
+    invoiceNumber: invoice.number,
   })
     .from(agentLog)
     .leftJoin(user, eq(agentLog.userId, user.id))
     .leftJoin(contact, on("contact", contact.id))
     .leftJoin(company, on("company", company.id))
     .leftJoin(deal, on("deal", deal.id))
+    .leftJoin(invoice, on("invoice", invoice.id))
     .where(opts.clientId ? eq(agentLog.clientId, opts.clientId) : undefined)
     .orderBy(desc(agentLog.createdAt), desc(agentLog.id))
     .limit(AGENT_LOG_PAGE_SIZE + 1)
     .offset((page - 1) * AGENT_LOG_PAGE_SIZE);
-  const entries = rows.slice(0, AGENT_LOG_PAGE_SIZE).map(({ recordType, recordId, recordName, ...e }) => ({
-    ...e,
-    record: recordType && recordId && recordName !== null ? { type: recordType, id: recordId, name: recordName } : null,
-  }));
+  const entries = rows.slice(0, AGENT_LOG_PAGE_SIZE).map(({ recordType, recordId, recordName, invoiceNumber, ...e }) => {
+    // an invoice goes by its number, as "INV-0001"
+    const name = invoiceNumber !== null ? formatInvoiceNumber(invoiceNumber) : recordName;
+    return { ...e, record: recordType && recordId && name !== null ? { type: recordType, id: recordId, name } : null };
+  });
   return { entries, more: rows.length > AGENT_LOG_PAGE_SIZE };
 }
 

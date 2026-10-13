@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTestDb } from "@/test/db";
 import type { Db } from "@/lib/db/client";
-import { agentLog, user } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { agentLog, invoice, user } from "@/lib/db/schema";
+import { makeClient } from "@/lib/clients";
+import { createContact, EMPTY_CONTACT } from "@/lib/contacts";
 import { createDeal, deleteDeal, EMPTY_DEAL } from "@/lib/deals";
+import { createInvoice, deleteInvoice } from "@/lib/invoices";
 import { AGENT_LOG_PAGE_SIZE, MAX_AGENT_LOG_PAGE, listAgentLog, listLoggedAgents, recordAgentChange } from "./agent-log";
 
 let t: { db: Db; close(): Promise<void> };
@@ -43,6 +47,22 @@ describe("listAgentLog", () => {
     await recordAgentChange(t.db, CLAUDE, { userId: "owner-1", tool: "log_activity", summary: "Logged", touched: { type: "deal", id: dealId } });
     await deleteDeal(t.db, dealId);
     expect((await listAgentLog(t.db)).entries).toMatchObject([{ summary: "Logged", record: null }]);
+  });
+
+  it("names an invoice by its number, past INV-9999 too, and drops the link once the Draft is deleted", async () => {
+    const contactId = (await createContact(t.db, { ...EMPTY_CONTACT, name: "Ada Lovelace" })).id!;
+    const dealId = (await createDeal(t.db, { ...EMPTY_DEAL, title: "Acme fit-out", stage: "Won", contactId })).id!;
+    const clientId = (await makeClient(t.db, dealId))!.id!;
+    const invoiceId = (await createInvoice(t.db, {
+      clientId, projectId: "", issueOn: "2026-10-12", dueOn: "2026-11-11", lines: [{ description: "Gate", quantity: "1", unitPrice: "300" }],
+    })).id!;
+    await t.db.update(invoice).set({ number: 12345 }).where(eq(invoice.id, invoiceId));
+    await recordAgentChange(t.db, CLAUDE, {
+      userId: "owner-1", tool: "create_invoice_draft", summary: "Drafted", touched: { type: "invoice", id: invoiceId },
+    });
+    expect((await listAgentLog(t.db)).entries).toMatchObject([{ record: { type: "invoice", id: invoiceId, name: "INV-12345" } }]);
+    await deleteInvoice(t.db, invoiceId);
+    expect((await listAgentLog(t.db)).entries).toMatchObject([{ summary: "Drafted", record: null }]);
   });
 
   it("keeps the entry, without a name, once the person is removed", async () => {

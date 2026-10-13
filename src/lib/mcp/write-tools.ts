@@ -7,12 +7,16 @@ import { z } from "zod";
 import type { Db } from "@/lib/db/client";
 import { company, contact, deal } from "@/lib/db/schema";
 import { logActivity, type ActivityTarget } from "@/lib/activities";
-import { recordAgentChange, type LoggedAgent } from "@/lib/agent-log";
+import { recordAgentChange, type LoggedAgent, type LoggedRecord } from "@/lib/agent-log";
 import { normaliseEmail } from "@/lib/access";
 import { checkContact, EMPTY_CONTACT } from "@/lib/contacts";
+import { addDays, formatDay, TIME_ZONE, todayIn } from "@/lib/dates";
 import { moveDealStage } from "@/lib/deals";
 import type { DealStage } from "@/lib/deal-stages";
 import { findOrAddCompany } from "@/lib/enquiries";
+import { createInvoice, formatInvoiceNumber, getInvoice, PAYMENT_DAYS, type InvoiceErrors } from "@/lib/invoices";
+import { formatMoney } from "@/lib/money";
+import { invoicePage } from "./read-tools";
 
 // The agent (its client ID and name, for the log), who it acts as, and whether its token carries guildhall:write.
 export type Agent = LoggedAgent & { userId: string; canChange: boolean };
@@ -27,7 +31,7 @@ const refused = (text: string): WriteResult => ({ ok: false, text });
 // A change made: recorded in the agent log against the record it touched, then answered. `forAgent` is said after the
 // summary to the agent only, as the log page never shows an ID.
 async function changed(
-  db: Db, agent: Agent, change: { tool: string; touched: ActivityTarget; summary: string; id: string; forAgent?: string },
+  db: Db, agent: Agent, change: { tool: string; touched: LoggedRecord; summary: string; id: string; forAgent?: string },
 ): Promise<WriteResult> {
   await recordAgentChange(db, agent, { userId: agent.userId, tool: change.tool, summary: change.summary, touched: change.touched });
   return { ok: true, id: change.id, text: change.forAgent ? `${change.summary} ${change.forAgent}` : change.summary };
@@ -116,5 +120,46 @@ export async function moveDeal(
   return changed(db, agent, {
     tool: "move_deal_stage", touched: { type: "deal", id: input.deal_id },
     summary: `Moved '${found.title}' from ${moved.from} to ${moved.to}.`, id: input.deal_id,
+  });
+}
+
+export type DraftLine = { description: string; quantity: string | number; unit_price: string | number };
+export type NewInvoiceDraft = { client_id: string; project_id?: string; lines: DraftLine[]; due_date?: string };
+
+// The form's sentences, with the line each is about, as one answer.
+function invoiceProblems(errors: InvoiceErrors): string {
+  const said = Object.entries(errors).filter(([key]) => key !== "line").map(([, text]) => text as string);
+  for (const [n, line] of Object.entries(errors.line ?? {})) {
+    said.push(...Object.values(line).map((text) => `Line ${Number(n) + 1}: ${text}`));
+  }
+  return said.join(" ");
+}
+
+// create_invoice_draft: a Draft, through the same rules as the New invoice form, issued today with PAYMENT_DAYS to pay
+// unless a due date is given. It has no way to mark anything Sent or Paid: the owner checks the Draft and sends it.
+// `appUrl` is the app's origin, for the invoice page's address.
+export async function createInvoiceDraft(
+  db: Db, agent: Agent, input: NewInvoiceDraft, appUrl: string, now = new Date(),
+): Promise<WriteResult> {
+  if (!agent.canChange) return refused(READ_ONLY_REFUSAL);
+  const issueOn = todayIn(TIME_ZONE, now);
+  const saved = await createInvoice(db, {
+    clientId: input.client_id, projectId: input.project_id ?? "", issueOn,
+    dueOn: input.due_date ?? addDays(issueOn, PAYMENT_DAYS),
+    lines: input.lines.map((l) => ({ description: l.description, quantity: String(l.quantity), unitPrice: String(l.unit_price) })),
+  });
+  if (saved.errors) {
+    const clientHelp = saved.errors.clientId ? " Find the client's ID with list_clients." : "";
+    const projectHelp = saved.errors.projectId ? " Find its projects with list_projects." : "";
+    return refused(`${invoiceProblems(saved.errors)}${clientHelp}${projectHelp} Nothing was made.`);
+  }
+  const made = (await getInvoice(db, saved.id))!;
+  const number = formatInvoiceNumber(made.number);
+  const { subtotal, tax, total } = made.totals;
+  return changed(db, agent, {
+    tool: "create_invoice_draft", touched: { type: "invoice", id: made.id },
+    summary: `Drafted ${number} for '${made.clientName}': ${formatMoney(subtotal)} plus ${formatMoney(tax)} tax, ${formatMoney(total)} in all, due ${formatDay(made.dueOn)}.`,
+    id: made.id,
+    forAgent: `It is a Draft: the owner checks it and sends it at ${invoicePage(appUrl, made.id)}. ID ${made.id}.`,
   });
 }

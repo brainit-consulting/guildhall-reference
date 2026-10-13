@@ -1,0 +1,2 @@
+ALTER TABLE "agent_log" DROP CONSTRAINT "agent_log_record_type";--> statement-breakpoint
+ALTER TABLE "agent_log" ADD CONSTRAINT "agent_log_record_type" CHECK ("agent_log"."record_type" in ('contact', 'company', 'deal', 'invoice'));

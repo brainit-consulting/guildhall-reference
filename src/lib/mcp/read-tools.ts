@@ -3,13 +3,17 @@
 // record IDs here (they pass them back to get_*); the UI still never shows them.
 import type { Db } from "@/lib/db/client";
 import { listActivities, type ActivityEntry, type ActivityTarget } from "@/lib/activities";
+import { listClients } from "@/lib/clients";
 import { getCompany } from "@/lib/companies";
 import { getContact, listContacts } from "@/lib/contacts";
 import { addDays, dueWhen, TIME_ZONE, todayIn } from "@/lib/dates";
 import { getDeal, listDeals } from "@/lib/deals";
 import type { DealStage } from "@/lib/deal-stages";
+import { formatInvoiceNumber, getInvoice, getInvoiceIdByNumber, type InvoiceStatus } from "@/lib/invoices";
+import { formatTaxRate } from "@/lib/invoice-totals";
 import { formatMoney } from "@/lib/money";
 import { pipelineColumns } from "@/lib/pipeline";
+import { listProjects, type ProjectStatus } from "@/lib/projects";
 import { listTasks, type TaskLine } from "@/lib/tasks";
 
 export const SEARCH_LIMIT = 20;
@@ -124,4 +128,65 @@ export async function listTasksDue(db: Db, days: number, now = new Date()): Prom
   const today = todayIn(TIME_ZONE, now);
   const tasks = await listTasks(db, { status: "open", dueBy: addDays(today, days) });
   return tasks.map((t) => ({ id: t.id, title: t.title, dueOn: t.dueOn, when: dueWhen(t.dueOn, today), on: t.on }));
+}
+
+export type ClientMatch = { id: string; name: string; contact: Ref | null; wonDeals: number };
+
+// list_clients: every client A to Z, or those whose name contains the query, any capitals.
+export async function listClientsFor(db: Db, query = ""): Promise<ClientMatch[]> {
+  const q = query.trim().toLowerCase();
+  return (await listClients(db)).filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({
+    id: c.id, name: c.name, contact: c.contactId && c.contactName ? { id: c.contactId, name: c.contactName } : null,
+    wonDeals: c.wonDeals,
+  }));
+}
+
+export type ProjectMatch = {
+  id: string; name: string; status: ProjectStatus; client: Ref; budget: Money; startOn: string; endOn: string;
+};
+
+// list_projects: Active before Done, earliest start first, as /projects lists them; one client's, or one status's,
+// when asked.
+export async function listProjectsFor(db: Db, filter: { client_id?: string; status?: ProjectStatus } = {}): Promise<ProjectMatch[]> {
+  return (await listProjects(db))
+    .filter((p) => (!filter.client_id || p.clientId === filter.client_id) && (!filter.status || p.status === filter.status))
+    .map((p) => ({
+      id: p.id, name: p.name, status: p.status, client: { id: p.clientId, name: p.clientName }, budget: money(p.budget),
+      startOn: p.startOn, endOn: p.endOn,
+    }));
+}
+
+export type InvoiceRecord = {
+  id: string; number: string; status: InvoiceStatus; client: Ref; project: Ref | null; issueOn: string; dueOn: string;
+  taxRate: string; lines: { description: string; quantity: number; unitPrice: Money; amount: Money }[];
+  subtotal: Money; tax: Money; total: Money; page: string;
+};
+
+// "INV-0007", "inv 7", "#0007" or "7" to 7; null for anything else.
+export function readInvoiceNumber(asked: string): number | null {
+  const match = /^(?:inv[-\s]?|#)?0*(\d{1,9})$/i.exec(asked.trim());
+  return match ? Number(match[1]) : null;
+}
+
+// The invoice page's full address, for an agent to hand the owner. `appUrl` is the app's origin.
+export function invoicePage(appUrl: string, id: string): string {
+  return new URL(`/invoices/${id}`, appUrl).href;
+}
+
+// get_invoice: by ID or by number. null when there is no such invoice.
+export async function getInvoiceRecord(db: Db, idOrNumber: string, appUrl: string): Promise<InvoiceRecord | null> {
+  const number = readInvoiceNumber(idOrNumber);
+  const id = number === null ? idOrNumber.trim() : await getInvoiceIdByNumber(db, number);
+  const i = id ? await getInvoice(db, id) : null;
+  if (!i) return null;
+  return {
+    id: i.id, number: formatInvoiceNumber(i.number), status: i.status,
+    client: { id: i.clientId, name: i.clientName },
+    project: i.projectId && i.projectName ? { id: i.projectId, name: i.projectName } : null,
+    issueOn: i.issueOn, dueOn: i.dueOn, taxRate: formatTaxRate(i.taxRate),
+    lines: i.lines.map((l, n) => ({
+      description: l.description, quantity: Number(l.quantity), unitPrice: money(l.unitPrice), amount: money(i.totals.lines[n]),
+    })),
+    subtotal: money(i.totals.subtotal), tax: money(i.totals.tax), total: money(i.totals.total), page: invoicePage(appUrl, i.id),
+  };
 }

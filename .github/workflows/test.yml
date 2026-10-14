@@ -7,6 +7,11 @@ on:
 
 # No secrets: tests use the built-in database. Code Dungeon's auto-merge waits for this to pass.
 # Ubuntu only: a private repo's free Actions minutes count Windows double, and every coder's push runs this.
+# Cancel obsolete runs for the same PR or branch; keep the latest full test suite.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Tests
@@ -21,6 +26,12 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - name: Install Playwright's Chromium
         run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
